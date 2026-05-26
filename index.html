@@ -1,24 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+/>
 
 <title>Cloud Notes</title>
 
+<link rel="preconnect"
+href="https://fonts.googleapis.com">
+
+<link
+href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap"
+rel="stylesheet"
+/>
+
 <style>
 
-body{
+*, *::before, *::after{
+  box-sizing:border-box;
   margin:0;
-  background:#111;
-  color:white;
-  font-family:sans-serif;
+  padding:0;
 }
 
-/* LOGIN */
+:root{
+
+  --bg:#0e0e0e;
+  --surface:#161616;
+  --surface2:#1e1e1e;
+  --border:#2a2a2a;
+
+  --text:#e8e8e8;
+  --muted:#666;
+
+  --accent:#c8f06e;
+  --danger:#f06e6e;
+
+  --radius:10px;
+
+  --mono:'DM Mono', monospace;
+  --sans:'DM Sans', sans-serif;
+}
+
+body{
+
+  background:var(--bg);
+  color:var(--text);
+
+  font-family:var(--sans);
+
+  height:100vh;
+
+  overflow:hidden;
+}
 
 #loginScreen{
+
   height:100vh;
 
   display:flex;
@@ -27,94 +68,330 @@ body{
   justify-content:center;
   align-items:center;
 
-  gap:10px;
+  animation:fadeIn .3s ease;
 }
 
-#passwordBox{
+.login-logo{
+
+  font-family:var(--mono);
+
+  font-size:12px;
+
+  letter-spacing:.2em;
+
+  text-transform:uppercase;
+
+  color:var(--muted);
+
+  margin-bottom:40px;
+}
+
+.login-logo span{
+  color:var(--accent);
+}
+
+.login-card{
+
+  width:340px;
+
+  background:var(--surface);
+
+  border:1px solid var(--border);
+
+  border-radius:14px;
+
+  padding:32px;
+
   display:flex;
-  gap:10px;
+  flex-direction:column;
+
+  gap:16px;
+}
+
+.login-card h1{
+
+  font-family:var(--mono);
+
+  font-size:18px;
+
+  font-weight:400;
+}
+
+.input-row{
+
+  display:flex;
+  gap:8px;
 }
 
 input{
-  width:300px;
 
-  padding:15px;
+  flex:1;
 
-  background:#222;
-  color:white;
+  background:var(--bg);
+
+  border:1px solid var(--border);
+
+  color:var(--text);
+
+  border-radius:var(--radius);
+
+  padding:12px 14px;
+
+  font-family:var(--mono);
+
+  font-size:16px;
+
+  outline:none;
+
+  transition:.15s;
+}
+
+input:focus{
+  border-color:var(--accent);
+}
+
+.btn{
+
+  background:var(--surface2);
+
+  border:1px solid var(--border);
+
+  color:var(--text);
+
+  border-radius:var(--radius);
+
+  padding:12px 16px;
+
+  cursor:pointer;
+
+  transition:.15s;
+
+  font-family:var(--sans);
+
+  font-size:13px;
+}
+
+.btn:hover{
+
+  background:#262626;
+}
+
+.btn-primary{
+
+  background:var(--accent);
+
+  color:#111;
 
   border:none;
 
-  font-size:16px;
+  font-weight:500;
 }
 
-button{
-  padding:10px 20px;
-  cursor:pointer;
+.btn-primary:hover{
+
+  background:#d8f880;
+}
+
+.btn-danger{
+
+  color:var(--danger);
+}
+
+.btn-danger:hover{
+
+  background:rgba(240,110,110,.08);
+
+  border-color:var(--danger);
+}
+
+.btn-icon{
+
+  padding:10px 12px;
 }
 
 #error{
-  color:red;
-  height:20px;
-}
 
-/* APP */
+  height:18px;
+
+  font-size:12px;
+
+  color:var(--danger);
+
+  font-family:var(--mono);
+
+  text-align:center;
+}
 
 #app{
+
   display:none;
+
   height:100vh;
 }
-
-/* SIDEBAR */
 
 #sidebar{
 
   width:250px;
 
-  background:#1b1b1b;
+  background:var(--surface);
 
-  padding:15px;
+  border-right:1px solid var(--border);
 
-  box-sizing:border-box;
+  display:flex;
+
+  flex-direction:column;
+
+  overflow:hidden;
+}
+
+.sidebar-header{
+
+  padding:16px;
+
+  border-bottom:1px solid var(--border);
+
+  display:flex;
+
+  align-items:center;
+  justify-content:space-between;
+}
+
+.sidebar-logo{
+
+  font-family:var(--mono);
+
+  font-size:12px;
+
+  letter-spacing:.12em;
+
+  text-transform:uppercase;
+
+  color:var(--muted);
+}
+
+.sidebar-logo b{
+  color:var(--accent);
+}
+
+#notesList{
+
+  flex:1;
 
   overflow-y:auto;
 
-  border-right:1px solid #333;
+  padding:10px;
 }
 
 .noteItem{
 
-  background:#222;
-
   padding:12px;
 
-  margin-bottom:10px;
-
-  border-radius:10px;
+  border-radius:var(--radius);
 
   cursor:pointer;
 
-  transition:0.2s;
+  margin-bottom:5px;
 
-  word-break:break-word;
+  border:1px solid transparent;
+
+  transition:.12s;
 }
 
 .noteItem:hover{
-  background:#333;
+
+  background:var(--surface2);
 }
 
-.active{
-  background:#444;
+.noteItem.active{
+
+  background:var(--surface2);
+
+  border-color:var(--border);
 }
 
-#newNoteBtn{
-  width:100%;
-  margin-bottom:20px;
+.noteItem-title{
+
+  font-family:var(--mono);
+
+  font-size:13px;
+
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 
-/* EDITOR */
+.noteItem.active
+.noteItem-title{
+
+  color:var(--accent);
+}
+
+.empty-state{
+
+  color:var(--muted);
+
+  text-align:center;
+
+  padding:30px 15px;
+
+  font-family:var(--mono);
+
+  font-size:12px;
+
+  line-height:1.8;
+}
+
 
 #editor{
+
+  flex:1;
+
+  display:flex;
+  flex-direction:column;
+
+  overflow:hidden;
+}
+
+#topBar{
+
+  min-height:60px;
+
+  padding:14px 20px;
+
+  border-bottom:1px solid var(--border);
+
+  display:flex;
+
+  align-items:center;
+  justify-content:space-between;
+
+  gap:12px;
+}
+
+#noteTitle{
+
+  font-family:var(--mono);
+
+  font-size:14px;
+
+  white-space:nowrap;
+
+  overflow:hidden;
+
+  text-overflow:ellipsis;
+}
+
+#noteTitle.placeholder{
+  color:var(--muted);
+}
+
+.topBar-actions{
+
+  display:flex;
+  gap:8px;
+}
+
+#editorWrap{
 
   flex:1;
 
@@ -124,22 +401,7 @@ button{
 
   padding:20px;
 
-  box-sizing:border-box;
-}
-
-#topBar{
-
-  display:flex;
-
-  justify-content:space-between;
-
-  align-items:center;
-
-  gap:10px;
-
-  margin-bottom:15px;
-
-  flex-wrap:wrap;
+  overflow:hidden;
 }
 
 textarea{
@@ -148,35 +410,73 @@ textarea{
 
   width:100%;
 
-  background:#222;
-
-  color:white;
+  background:transparent;
 
   border:none;
 
-  padding:15px;
-
-  font-size:16px;
+  color:var(--text);
 
   resize:none;
 
-  box-sizing:border-box;
+  outline:none;
 
-  border-radius:10px;
+  font-family:var(--mono);
+
+  font-size:16px;
+
+  line-height:1.8;
+
+  caret-color:var(--accent);
+}
+
+textarea::placeholder{
+  color:var(--muted);
+}
+
+.editor-footer{
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:space-between;
+
+  margin-top:12px;
+
+  padding-top:12px;
+
+  border-top:1px solid var(--border);
+}
+
+.word-count{
+
+  color:var(--muted);
+
+  font-family:var(--mono);
+
+  font-size:11px;
 }
 
 #saveStatus{
-  color:lime;
+
+  color:var(--accent);
+
+  font-family:var(--mono);
+
+  font-size:11px;
+
+  opacity:0;
+
+  transition:.2s;
 }
 
-/* ========================= */
-/* MOBILE */
-/* ========================= */
+#saveStatus.visible{
+  opacity:1;
+}
 
-@media (max-width: 700px){
+@media (max-width:700px){
 
   #app{
-
     flex-direction:column;
   }
 
@@ -188,36 +488,46 @@ textarea{
 
     border-right:none;
 
-    border-bottom:1px solid #333;
+    border-bottom:1px solid var(--border);
   }
 
   #editor{
 
     height:calc(100vh - 220px);
-
-    padding:12px;
   }
 
-  textarea{
+  #editorWrap{
 
-    font-size:18px;
+    padding:14px;
   }
 
+  #topBar{
+
+    padding:12px 14px;
+  }
+
+  .login-card{
+
+    width:90vw;
+  }
+
+  textarea,
   input{
 
-    width:220px;
+    font-size:16px;
+  }
+}
+
+@keyframes fadeIn{
+
+  from{
+    opacity:0;
+    transform:translateY(6px);
   }
 
-  #topBar h2{
-
-    font-size:18px;
-
-    margin:0;
-  }
-
-  button{
-
-    padding:12px 16px;
+  to{
+    opacity:1;
+    transform:translateY(0);
   }
 }
 
@@ -225,35 +535,51 @@ textarea{
 </head>
 <body>
 
-<!-- LOGIN -->
-
 <div id="loginScreen">
 
-  <h1>Cloud Notes</h1>
+  <div class="login-logo">
+    ☁ cloud<span>notes</span>
+  </div>
 
-  <div id="passwordBox">
+  <div class="login-card">
 
-    <input
-      type="password"
-      id="password"
-      placeholder="Password"
+    <h1>
+      Welcome back
+    </h1>
+
+    <div class="input-row">
+
+      <input
+        type="password"
+        id="password"
+        placeholder="Enter password"
+        onkeydown="
+          if(event.key==='Enter')
+          login()
+        "
+      />
+
+      <button
+        class="btn btn-icon"
+        onclick="togglePassword()"
+      >
+        👁
+      </button>
+
+    </div>
+
+    <button
+      class="btn btn-primary"
+      onclick="login()"
     >
-
-    <button onclick="togglePassword()">
-      Show
+      Enter
     </button>
+
+    <div id="error"></div>
 
   </div>
 
-  <button onclick="login()">
-    Enter
-  </button>
-
-  <div id="error"></div>
-
 </div>
-
-<!-- APP -->
 
 <div id="app">
 
@@ -261,14 +587,29 @@ textarea{
 
   <div id="sidebar">
 
-    <button
-      id="newNoteBtn"
-      onclick="createNote()"
-    >
-      + New Note
-    </button>
+    <div class="sidebar-header">
 
-    <div id="notesList"></div>
+      <div class="sidebar-logo">
+        ☁ <b>notes</b>
+      </div>
+
+      <button
+        class="btn btn-icon"
+        onclick="createNote()"
+      >
+        ＋
+      </button>
+
+    </div>
+
+    <div id="notesList">
+
+      <div class="empty-state">
+        no notes yet<br>
+        press ＋ to create one
+      </div>
+
+    </div>
 
   </div>
 
@@ -278,29 +619,56 @@ textarea{
 
     <div id="topBar">
 
-      <h2 id="noteTitle">
-        No note selected
-      </h2>
+      <div
+        id="noteTitle"
+        class="placeholder"
+      >
+        no note selected
+      </div>
 
-      <div>
+      <div class="topBar-actions">
 
-        <button onclick="saveNote()">
-          Save
+        <button
+          class="btn"
+          onclick="saveNote()"
+        >
+          save
         </button>
 
-        <button onclick="deleteNote()">
-          Delete
+        <button
+          class="btn btn-danger"
+          onclick="deleteNote()"
+        >
+          delete
         </button>
 
       </div>
 
     </div>
 
-    <textarea id="note"></textarea>
+    <div id="editorWrap">
 
-    <br>
+      <textarea
+        id="note"
+        placeholder="Start writing..."
+      ></textarea>
 
-    <div id="saveStatus"></div>
+      <div class="editor-footer">
+
+        <div
+          class="word-count"
+          id="wordCount"
+        >
+          0 words
+        </div>
+
+        <div id="saveStatus">
+          saved ✓
+        </div>
+
+      </div>
+
+    </div>
 
   </div>
 
@@ -315,9 +683,9 @@ let PASSWORD = "";
 
 let currentNote = "";
 
-// ====================
-// SHOW / HIDE PASSWORD
-// ====================
+let saveTimer = null;
+
+let isSaving = false;
 
 function togglePassword(){
 
@@ -330,14 +698,22 @@ function togglePassword(){
     : "password";
 }
 
-// ====================
-// LOGIN
-// ====================
-
 async function login(){
+
+  const btn =
+    document.querySelector(".btn-primary");
+
+  btn.disabled = true;
+
+  btn.innerText = "…";
 
   PASSWORD =
     document.getElementById("password").value;
+
+  localStorage.setItem(
+    "cloudNotesPassword",
+    PASSWORD
+  );
 
   try{
 
@@ -352,7 +728,11 @@ async function login(){
 
       document.getElementById("error")
         .innerText =
-        "Wrong password";
+        "wrong password";
+
+      btn.disabled = false;
+
+      btn.innerText = "Enter";
 
       return;
     }
@@ -363,20 +743,19 @@ async function login(){
     document.getElementById("app")
       .style.display = "flex";
 
-    loadNotesList();
-
+    await loadNotesList();
   }
   catch(err){
 
     document.getElementById("error")
       .innerText =
-      "Cannot connect to server";
+      "cannot connect to server";
+
+    btn.disabled = false;
+
+    btn.innerText = "Enter";
   }
 }
-
-// ====================
-// LOAD NOTES LIST
-// ====================
 
 async function loadNotesList(){
 
@@ -395,19 +774,36 @@ async function loadNotesList(){
 
   list.innerHTML = "";
 
+  if(!notes.length){
+
+    list.innerHTML =
+
+    `<div class="empty-state">
+      no notes yet<br>
+      press ＋ to create one
+    </div>`;
+
+    return;
+  }
+
   notes.forEach(name => {
 
     const div =
       document.createElement("div");
 
     div.className =
-      "noteItem";
+      "noteItem" +
+      (
+        name === currentNote
+        ? " active"
+        : ""
+      );
 
-    if(name === currentNote){
-      div.classList.add("active");
-    }
+    div.innerHTML =
 
-    div.innerText = name;
+    `<div class="noteItem-title">
+      ${escHtml(name)}
+    </div>`;
 
     div.onclick = () => {
       openNote(name);
@@ -416,10 +812,6 @@ async function loadNotesList(){
     list.appendChild(div);
   });
 }
-
-// ====================
-// CREATE NOTE
-// ====================
 
 async function createNote(){
 
@@ -433,17 +825,14 @@ async function createNote(){
   document.getElementById("note")
     .value = "";
 
-  document.getElementById("noteTitle")
-    .innerText = name;
+  setTitle(name);
 
-  saveNote();
+  updateWordCount();
 
-  loadNotesList();
+  await saveNote();
+
+  await loadNotesList();
 }
-
-// ====================
-// OPEN NOTE
-// ====================
 
 async function openNote(name){
 
@@ -454,9 +843,11 @@ async function openNote(name){
 
       API +
 
-      "?password=" + PASSWORD +
+      "?password=" +
+      PASSWORD +
 
-      "&note=" + encodeURIComponent(name)
+      "&note=" +
+      encodeURIComponent(name)
     );
 
   const text =
@@ -465,15 +856,12 @@ async function openNote(name){
   document.getElementById("note")
     .value = text;
 
-  document.getElementById("noteTitle")
-    .innerText = name;
+  setTitle(name);
 
-  loadNotesList();
+  updateWordCount();
+
+  await loadNotesList();
 }
-
-// ====================
-// SAVE NOTE
-// ====================
 
 async function saveNote(){
 
@@ -481,47 +869,47 @@ async function saveNote(){
     return;
   }
 
+  // PREVENT DOUBLE SAVE
+
+  if(isSaving){
+    return;
+  }
+
+  isSaving = true;
+
   const text =
     document.getElementById("note")
     .value;
 
-  await fetch(API, {
+  try{
 
-    method:"POST",
+    await fetch(API, {
 
-    headers:{
-      "Content-Type":"application/json"
-    },
+      method:"POST",
 
-    body:JSON.stringify({
+      headers:{
+        "Content-Type":"application/json"
+      },
 
-      password:PASSWORD,
+      body:JSON.stringify({
 
-      note:currentNote,
+        password:PASSWORD,
 
-      text:text
+        note:currentNote,
 
-    })
+        text:text
+      })
+    });
 
-  });
+    showSaved();
+  }
+  catch(err){
 
-  document.getElementById("saveStatus")
-    .innerText =
-    "Saved!";
+    console.error(err);
+  }
 
-  setTimeout(() => {
-
-    document.getElementById("saveStatus")
-      .innerText = "";
-
-  }, 1000);
-
-  loadNotesList();
+  isSaving = false;
 }
-
-// ====================
-// DELETE NOTE
-// ====================
 
 async function deleteNote(){
 
@@ -529,12 +917,13 @@ async function deleteNote(){
     return;
   }
 
-  const yes =
-    confirm(
-      "Delete this note?"
-    );
-
-  if(!yes){
+  if(
+    !confirm(
+      'Delete "' +
+      currentNote +
+      '"?'
+    )
+  ){
     return;
   }
 
@@ -551,9 +940,7 @@ async function deleteNote(){
       password:PASSWORD,
 
       note:currentNote
-
     })
-
   });
 
   currentNote = "";
@@ -561,12 +948,116 @@ async function deleteNote(){
   document.getElementById("note")
     .value = "";
 
-  document.getElementById("noteTitle")
-    .innerText =
-    "No note selected";
+  setTitle(null);
 
-  loadNotesList();
+  updateWordCount();
+
+  await loadNotesList();
 }
+
+document
+.getElementById("note")
+.addEventListener("input", () => {
+
+  updateWordCount();
+
+  clearTimeout(saveTimer);
+
+  saveTimer =
+    setTimeout(
+      saveNote,
+      2000
+    );
+});
+
+function setTitle(name){
+
+  const el =
+    document.getElementById("noteTitle");
+
+  if(name){
+
+    el.innerText = name;
+
+    el.classList.remove("placeholder");
+  }
+  else{
+
+    el.innerText =
+      "no note selected";
+
+    el.classList.add("placeholder");
+  }
+}
+
+function showSaved(){
+
+  const el =
+    document.getElementById("saveStatus");
+
+  el.classList.add("visible");
+
+  setTimeout(() => {
+
+    el.classList.remove("visible");
+
+  }, 1500);
+}
+
+function updateWordCount(){
+
+  const text =
+    document.getElementById("note")
+    .value
+    .trim();
+
+  const count =
+    text
+    ? text.split(/\s+/).length
+    : 0;
+
+  document.getElementById("wordCount")
+    .innerText =
+
+    count +
+    (
+      count === 1
+      ? " word"
+      : " words"
+    );
+}
+
+function escHtml(s){
+
+  return s
+
+    .replace(/&/g,"&amp;")
+
+    .replace(/</g,"&lt;")
+
+    .replace(/>/g,"&gt;")
+
+    .replace(/"/g,"&quot;");
+}
+
+window.onload = () => {
+
+  const savedPassword =
+
+    localStorage.getItem(
+      "cloudNotesPassword"
+    );
+
+  if(savedPassword){
+
+    document
+      .getElementById("password")
+      .value = savedPassword;
+
+    login();
+  }
+};
+
 
 </script>
 
