@@ -341,7 +341,6 @@ input:focus{
   line-height:1.8;
 }
 
-
 #editor{
 
   flex:1;
@@ -474,6 +473,24 @@ textarea::placeholder{
   opacity:1;
 }
 
+.remember-row{
+
+  display:flex;
+
+  align-items:center;
+
+  gap:8px;
+
+  color:#888;
+
+  font-size:13px;
+}
+
+.remember-row input{
+
+  width:auto;
+}
+
 @media (max-width:700px){
 
   #app{
@@ -568,6 +585,17 @@ textarea::placeholder{
 
     </div>
 
+    <label class="remember-row">
+
+      <input
+        type="checkbox"
+        id="rememberMe"
+      >
+
+      Remember me
+
+    </label>
+
     <button
       class="btn btn-primary"
       onclick="login()"
@@ -582,8 +610,6 @@ textarea::placeholder{
 </div>
 
 <div id="app">
-
-  <!-- SIDEBAR -->
 
   <div id="sidebar">
 
@@ -612,8 +638,6 @@ textarea::placeholder{
     </div>
 
   </div>
-
-  <!-- EDITOR -->
 
   <div id="editor">
 
@@ -710,10 +734,25 @@ async function login(){
   PASSWORD =
     document.getElementById("password").value;
 
-  localStorage.setItem(
-    "cloudNotesPassword",
-    PASSWORD
-  );
+  const remember =
+
+    document.getElementById(
+      "rememberMe"
+    ).checked;
+
+  if(remember){
+
+    localStorage.setItem(
+      "cloudNotesPassword",
+      PASSWORD
+    );
+  }
+  else{
+
+    localStorage.removeItem(
+      "cloudNotesPassword"
+    );
+  }
 
   try{
 
@@ -869,8 +908,6 @@ async function saveNote(){
     return;
   }
 
-  // PREVENT DOUBLE SAVE
-
   if(isSaving){
     return;
   }
@@ -966,7 +1003,7 @@ document
   saveTimer =
     setTimeout(
       saveNote,
-      2000
+      1500
     );
 });
 
@@ -1001,7 +1038,7 @@ function showSaved(){
 
     el.classList.remove("visible");
 
-  }, 1500);
+  }, 1200);
 }
 
 function updateWordCount(){
@@ -1054,10 +1091,13 @@ window.onload = () => {
       .getElementById("password")
       .value = savedPassword;
 
+    document
+      .getElementById("rememberMe")
+      .checked = true;
+
     login();
   }
 };
-
 
 </script>
 
