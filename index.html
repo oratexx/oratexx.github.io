@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Cloud Notes</title>
+
+<style>
+
+body{
+  margin:0;
+  background:#111;
+  color:white;
+  font-family:sans-serif;
+}
+
+/* LOGIN */
+
+#loginScreen{
+  height:100vh;
+
+  display:flex;
+  flex-direction:column;
+
+  justify-content:center;
+  align-items:center;
+
+  gap:10px;
+}
+
+#passwordBox{
+  display:flex;
+  gap:10px;
+}
+
+input{
+  width:300px;
+
+  padding:15px;
+
+  background:#222;
+  color:white;
+
+  border:none;
+
+  font-size:16px;
+}
+
+button{
+  padding:10px 20px;
+  cursor:pointer;
+}
+
+#error{
+  color:red;
+  height:20px;
+}
+
+/* APP */
+
+#app{
+  display:none;
+  height:100vh;
+}
+
+/* SIDEBAR */
+
+#sidebar{
+
+  width:250px;
+
+  background:#1b1b1b;
+
+  padding:15px;
+
+  box-sizing:border-box;
+
+  overflow-y:auto;
+
+  border-right:1px solid #333;
+}
+
+.noteItem{
+
+  background:#222;
+
+  padding:12px;
+
+  margin-bottom:10px;
+
+  border-radius:10px;
+
+  cursor:pointer;
+
+  transition:0.2s;
+
+  word-break:break-word;
+}
+
+.noteItem:hover{
+  background:#333;
+}
+
+.active{
+  background:#444;
+}
+
+#newNoteBtn{
+  width:100%;
+  margin-bottom:20px;
+}
+
+/* EDITOR */
+
+#editor{
+
+  flex:1;
+
+  display:flex;
+
+  flex-direction:column;
+
+  padding:20px;
+
+  box-sizing:border-box;
+}
+
+#topBar{
+
+  display:flex;
+
+  justify-content:space-between;
+
+  align-items:center;
+
+  gap:10px;
+
+  margin-bottom:15px;
+
+  flex-wrap:wrap;
+}
+
+textarea{
+
+  flex:1;
+
+  width:100%;
+
+  background:#222;
+
+  color:white;
+
+  border:none;
+
+  padding:15px;
+
+  font-size:16px;
+
+  resize:none;
+
+  box-sizing:border-box;
+
+  border-radius:10px;
+}
+
+#saveStatus{
+  color:lime;
+}
+
+/* ========================= */
+/* MOBILE */
+/* ========================= */
+
+@media (max-width: 700px){
+
+  #app{
+
+    flex-direction:column;
+  }
+
+  #sidebar{
+
+    width:100%;
+
+    height:220px;
+
+    border-right:none;
+
+    border-bottom:1px solid #333;
+  }
+
+  #editor{
+
+    height:calc(100vh - 220px);
+
+    padding:12px;
+  }
+
+  textarea{
+
+    font-size:18px;
+  }
+
+  input{
+
+    width:220px;
+  }
+
+  #topBar h2{
+
+    font-size:18px;
+
+    margin:0;
+  }
+
+  button{
+
+    padding:12px 16px;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+
+<div id="loginScreen">
+
+  <h1>Cloud Notes</h1>
+
+  <div id="passwordBox">
+
+    <input
+      type="password"
+      id="password"
+      placeholder="Password"
+    >
+
+    <button onclick="togglePassword()">
+      Show
+    </button>
+
+  </div>
+
+  <button onclick="login()">
+    Enter
+  </button>
+
+  <div id="error"></div>
+
+</div>
+
+<!-- APP -->
+
+<div id="app">
+
+  <!-- SIDEBAR -->
+
+  <div id="sidebar">
+
+    <button
+      id="newNoteBtn"
+      onclick="createNote()"
+    >
+      + New Note
+    </button>
+
+    <div id="notesList"></div>
+
+  </div>
+
+  <!-- EDITOR -->
+
+  <div id="editor">
+
+    <div id="topBar">
+
+      <h2 id="noteTitle">
+        No note selected
+      </h2>
+
+      <div>
+
+        <button onclick="saveNote()">
+          Save
+        </button>
+
+        <button onclick="deleteNote()">
+          Delete
+        </button>
+
+      </div>
+
+    </div>
+
+    <textarea id="note"></textarea>
+
+    <br>
+
+    <div id="saveStatus"></div>
+
+  </div>
+
+</div>
+
+<script>
+
+const API =
+"https://cloud-notes.azrielprabamukti6.workers.dev";
+
+let PASSWORD = "";
+
+let currentNote = "";
+
+// ====================
+// SHOW / HIDE PASSWORD
+// ====================
+
+function togglePassword(){
+
+  const input =
+    document.getElementById("password");
+
+  input.type =
+    input.type === "password"
+    ? "text"
+    : "password";
+}
+
+// ====================
+// LOGIN
+// ====================
+
+async function login(){
+
+  PASSWORD =
+    document.getElementById("password").value;
+
+  try{
+
+    const response =
+      await fetch(
+        API +
+        "/list?password=" +
+        PASSWORD
+      );
+
+    if(response.status === 401){
+
+      document.getElementById("error")
+        .innerText =
+        "Wrong password";
+
+      return;
+    }
+
+    document.getElementById("loginScreen")
+      .style.display = "none";
+
+    document.getElementById("app")
+      .style.display = "flex";
+
+    loadNotesList();
+
+  }
+  catch(err){
+
+    document.getElementById("error")
+      .innerText =
+      "Cannot connect to server";
+  }
+}
+
+// ====================
+// LOAD NOTES LIST
+// ====================
+
+async function loadNotesList(){
+
+  const response =
+    await fetch(
+      API +
+      "/list?password=" +
+      PASSWORD
+    );
+
+  const notes =
+    await response.json();
+
+  const list =
+    document.getElementById("notesList");
+
+  list.innerHTML = "";
+
+  notes.forEach(name => {
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "noteItem";
+
+    if(name === currentNote){
+      div.classList.add("active");
+    }
+
+    div.innerText = name;
+
+    div.onclick = () => {
+      openNote(name);
+    };
+
+    list.appendChild(div);
+  });
+}
+
+// ====================
+// CREATE NOTE
+// ====================
+
+async function createNote(){
+
+  const name =
+    prompt("Note name?");
+
+  if(!name) return;
+
+  currentNote = name;
+
+  document.getElementById("note")
+    .value = "";
+
+  document.getElementById("noteTitle")
+    .innerText = name;
+
+  saveNote();
+
+  loadNotesList();
+}
+
+// ====================
+// OPEN NOTE
+// ====================
+
+async function openNote(name){
+
+  currentNote = name;
+
+  const response =
+    await fetch(
+
+      API +
+
+      "?password=" + PASSWORD +
+
+      "&note=" + encodeURIComponent(name)
+    );
+
+  const text =
+    await response.text();
+
+  document.getElementById("note")
+    .value = text;
+
+  document.getElementById("noteTitle")
+    .innerText = name;
+
+  loadNotesList();
+}
+
+// ====================
+// SAVE NOTE
+// ====================
+
+async function saveNote(){
+
+  if(!currentNote){
+    return;
+  }
+
+  const text =
+    document.getElementById("note")
+    .value;
+
+  await fetch(API, {
+
+    method:"POST",
+
+    headers:{
+      "Content-Type":"application/json"
+    },
+
+    body:JSON.stringify({
+
+      password:PASSWORD,
+
+      note:currentNote,
+
+      text:text
+
+    })
+
+  });
+
+  document.getElementById("saveStatus")
+    .innerText =
+    "Saved!";
+
+  setTimeout(() => {
+
+    document.getElementById("saveStatus")
+      .innerText = "";
+
+  }, 1000);
+
+  loadNotesList();
+}
+
+// ====================
+// DELETE NOTE
+// ====================
+
+async function deleteNote(){
+
+  if(!currentNote){
+    return;
+  }
+
+  const yes =
+    confirm(
+      "Delete this note?"
+    );
+
+  if(!yes){
+    return;
+  }
+
+  await fetch(API, {
+
+    method:"DELETE",
+
+    headers:{
+      "Content-Type":"application/json"
+    },
+
+    body:JSON.stringify({
+
+      password:PASSWORD,
+
+      note:currentNote
+
+    })
+
+  });
+
+  currentNote = "";
+
+  document.getElementById("note")
+    .value = "";
+
+  document.getElementById("noteTitle")
+    .innerText =
+    "No note selected";
+
+  loadNotesList();
+}
+
+</script>
+
+</body>
+</html>
