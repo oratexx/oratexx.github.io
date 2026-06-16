@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PBR Map Generator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #0d0d0f;
+  --surface: #141416;
+  --panel: #1a1a1e;
+  --border: #2a2a30;
+  --accent: #7c6aff;
+  --accent2: #00e5c0;
+  --text: #e8e8f0;
+  --muted: #6b6b7a;
+  --label: #9999aa;
+  --red: #ff5f5f;
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+.logo span { color: var(--accent2); }
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.dot.ready { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+
+/* ── Layout ── */
+.app { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 49px); }
+
+/* ── Sidebar ── */
+aside {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+  padding: 6px 0 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+/* Upload zone */
+.upload-zone {
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+}
+.upload-zone:hover { border-color: var(--accent); background: rgba(124,106,255,0.05); }
+.upload-zone.dragover { border-color: var(--accent2); background: rgba(0,229,192,0.07); }
+.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-icon { font-size: 28px; margin-bottom: 8px; }
+.upload-zone p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.upload-zone strong { color: var(--label); font-weight: 500; }
+
+/* 3D upload */
+.upload-3d-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--label);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  transition: background 0.15s;
+}
+.upload-3d-toggle:hover { background: rgba(255,255,255,0.03); }
+.upload-3d-toggle .badge {
+  font-size: 10px;
+  background: rgba(124,106,255,0.15);
+  color: var(--accent);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+.upload-3d-area {
+  display: none;
+  margin-top: 8px;
+}
+.upload-3d-area.open { display: block; }
+.upload-3d-inner {
+  border: 1.5px dashed var(--border);
+  border-radius: 7px;
+  padding: 14px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.upload-3d-inner:hover { border-color: var(--accent); }
+.upload-3d-inner input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.upload-3d-inner p { font-size: 11px; color: var(--muted); }
+
+/* Controls */
+label.ctrl {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.ctrl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+.ctrl-name { color: var(--label); font-weight: 500; }
+.ctrl-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  min-width: 36px;
+  text-align: right;
+}
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  transition: transform 0.15s;
+  box-shadow: 0 0 0 3px rgba(124,106,255,0.2);
+}
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--label);
+  margin-bottom: 10px;
+}
+/* Custom toggle */
+.toggle { position: relative; width: 36px; height: 20px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0;
+  background: var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle input:checked + .toggle-track { background: var(--accent); }
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px; left: 3px;
+  transition: transform 0.2s;
+}
+.toggle input:checked + .toggle-track::after { transform: translateX(16px); }
+
+select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  width: 100%;
+  outline: none;
+  cursor: pointer;
+}
+select:focus { border-color: var(--accent); }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 7px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { opacity: 0.88; }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--label);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ── Main area ── */
+main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0 16px;
+  gap: 2px;
+}
+.tab {
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s;
+  font-family: var(--font-ui);
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+/* Map grid */
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  flex: 1;
+  overflow-y: auto;
+}
+.map-card {
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+}
+.map-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px;
+}
+.map-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+.map-canvas-wrap {
+  aspect-ratio: 1;
+  background: #0a0a0c;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.map-canvas-wrap canvas { max-width: 100%; max-height: 100%; display: block; }
+
+/* Preview tab */
+.preview-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  position: relative;
+}
+#threeCanvas {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  max-width: 100%;
+  background: #08080a;
+}
+.preview-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.preview-controls label {
+  font-size: 11px;
+  color: var(--label);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.preview-controls input[type=range] { width: 120px; }
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  height: 100%;
+  padding: 40px;
+  text-align: center;
+}
+.empty-icon { font-size: 40px; margin-bottom: 4px; }
+
+/* Tab pages */
+.tab-page { display: none; flex: 1; overflow: hidden; }
+.tab-page.active { display: flex; flex-direction: column; }
+
+/* Checkerboard for transparent */
+.checker {
+  background-image: linear-gradient(45deg,#222 25%,transparent 25%),
+    linear-gradient(-45deg,#222 25%,transparent 25%),
+    linear-gradient(45deg,transparent 75%,#222 75%),
+    linear-gradient(-45deg,transparent 75%,#222 75%);
+  background-size: 16px 16px;
+  background-position: 0 0,0 8px,8px -8px,-8px 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* Notification */
+.notif {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent2);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text);
+  z-index: 999;
+  transform: translateY(20px);
+  opacity: 0;
+  transition: transform 0.3s, opacity 0.3s;
+  pointer-events: none;
+}
+.notif.show { transform: translateY(0); opacity: 1; }
+
+@media (max-width: 800px) {
+  .app { grid-template-columns: 1fr; }
+  aside { border-right: none; border-bottom: 1px solid var(--border); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PBR.<span>gen</span></div>
+  <div class="header-status">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">no image</span>
+  </div>
+</header>
+
+<div class="app">
+<!-- ───────── SIDEBAR ───────── -->
+<aside>
+
+  <div class="section-title">Source</div>
+
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" id="upload" accept="image/*">
+    <div class="upload-icon">🖼</div>
+    <p><strong>Click or drag</strong> a texture image<br>PNG · JPG · WebP · EXR</p>
+  </div>
+
+  <!-- 3D Model Upload (optional) -->
+  <div class="upload-3d-toggle" id="toggle3d" onclick="toggle3DArea()">
+    <span>3D Model Preview</span>
+    <span class="badge">OPTIONAL</span>
+  </div>
+  <div class="upload-3d-area" id="area3d">
+    <div class="upload-3d-inner">
+      <input type="file" id="upload3d" accept=".obj,.gltf,.glb">
+      <p>📦 OBJ · GLTF · GLB</p>
+    </div>
+    <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;">Falls back to flat plane if no model loaded</p>
+  </div>
+
+  <div class="section-title">Normal Map</div>
+  <div class="panel">
+    <label class="ctrl">
+      <div class="ctrl-row"><span class="ctrl-name">Strength</span><span class="ctrl-val" id="strengthVal">4.0</span></div>
+      <input type="range" id="strength" min="0.1" max="20" step="0.1" value="4">
+    </label>
+    <label class="ctrl">
+      <div class="ctrl-row"><span class="ctrl-name">Blur Pre</span><span class="ctrl-val" id="blurVal">0</span></div>
+      <input type="range" id="blur" min="0" max="5" step="1" value="0">
+    </label>
+    <div class="toggle-row">
+      <span>Invert Height</span>
+      <label class="toggle"><input type="checkbox" id="invertHeight"><div class="toggle-track"></div></label>
+    </div>
+    <label class="ctrl" style="margin-bottom:0">
+      <div class="ctrl-row"><span class="ctrl-name">Format</span></div>
+      <select id="format">
+        <option value="ogl">OpenGL (+Y up)</option>
+        <option value="dx">DirectX (-Y)</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="section-title">Roughness / Metalness</div>
+  <div class="panel">
+    <label class="ctrl">
+      <div class="ctrl-row"><span class="ctrl-name">Brightness</span><span class="ctrl-val" id="brightVal">0</span></div>
+      <input type="range" id="brightness" min="-100" max="100" value="0">
+    </label>
+    <label class="ctrl">
+      <div class="ctrl-row"><span class="ctrl-name">Contrast</span><span class="ctrl-val" id="contrastVal">1.00</span></div>
+      <input type="range" id="contrast" min="0" max="300" value="100">
+    </label>
+    <label class="ctrl">
+      <div class="ctrl-row"><span class="ctrl-name">Gamma</span><span class="ctrl-val" id="gammaVal">1.0</span></div>
+      <input type="range" id="gamma" min="0.2" max="3" step="0.1" value="1">
+    </label>
+    <div class="toggle-row">
+      <span>Invert Roughness</span>
+      <label class="toggle"><input type="checkbox" id="invertRough"><div class="toggle-track"></div></label>
+    </div>
+    <label class="ctrl" style="margin-bottom:0">
+      <div class="ctrl-row"><span class="ctrl-name">Metal Threshold</span><span class="ctrl-val" id="metalThreshVal">128</span></div>
+      <input type="range" id="metalThresh" min="0" max="255" value="128">
+    </label>
+  </div>
+
+  <div class="section-title">AO / Height</div>
+  <div class="panel">
+    <label class="ctrl">
+      <div class="ctrl-row"><span class="ctrl-name">AO Intensity</span><span class="ctrl-val" id="aoVal">1.0</span></div>
+      <input type="range" id="aoIntensity" min="0" max="3" step="0.05" value="1">
+    </label>
+    <label class="ctrl" style="margin-bottom:0">
+      <div class="ctrl-row"><span class="ctrl-name">Height Scale</span><span class="ctrl-val" id="heightScaleVal">1.0</span></div>
+      <input type="range" id="heightScale" min="0.1" max="3" step="0.05" value="1">
+    </label>
+  </div>
+
+  <div class="section-title">Preview</div>
+  <div class="panel">
+    <label class="ctrl">
+      <div class="ctrl-row"><span class="ctrl-name">Metalness</span><span class="ctrl-val" id="metalVal">0.0</span></div>
+      <input type="range" id="metalPreview" min="0" max="1" step="0.01" value="0">
+    </label>
+    <label class="ctrl">
+      <div class="ctrl-row"><span class="ctrl-name">Roughness</span><span class="ctrl-val" id="roughPreviewVal">0.4</span></div>
+      <input type="range" id="roughPreview" min="0" max="1" step="0.01" value="0.4">
+    </label>
+    <label class="ctrl">
+      <div class="ctrl-row"><span class="ctrl-name">Light Intensity</span><span class="ctrl-val" id="lightIntVal">2.0</span></div>
+      <input type="range" id="lightIntensity" min="0.1" max="8" step="0.1" value="2">
+    </label>
+    <label class="ctrl" style="margin-bottom:0">
+      <div class="ctrl-row"><span class="ctrl-name">Normal Scale</span><span class="ctrl-val" id="normalScaleVal">1.0</span></div>
+      <input type="range" id="normalScale" min="0" max="3" step="0.05" value="1">
+    </label>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="generate()">⚡ Generate</button>
+    <button class="btn btn-ghost btn-sm" onclick="downloadAll()">⬇ Export All</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost btn-sm" onclick="downloadCanvas(normalCanvas,'normal.png')">Normal</button>
+    <button class="btn btn-ghost btn-sm" onclick="downloadCanvas(roughCanvas,'roughness.png')">Roughness</button>
+    <button class="btn btn-ghost btn-sm" onclick="downloadCanvas(metalCanvas,'metalness.png')">Metal</button>
+    <button class="btn btn-ghost btn-sm" onclick="downloadCanvas(aoCanvas,'ao.png')">AO</button>
+    <button class="btn btn-ghost btn-sm" onclick="downloadCanvas(heightCanvas,'height.png')">Height</button>
+  </div>
+
+</aside>
+
+<!-- ───────── MAIN ───────── -->
+<main>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('maps')">Maps</button>
+    <button class="tab" onclick="switchTab('preview')">3D Preview</button>
+  </div>
+
+  <!-- Maps tab -->
+  <div class="tab-page active" id="tab-maps">
+    <div class="map-grid" id="mapGrid">
+      <div class="empty-state" id="emptyState" style="grid-column:1/-1">
+        <div class="empty-icon">🎨</div>
+        <p>Upload a texture to generate PBR maps</p>
+        <p style="font-size:11px;color:var(--muted)">Normal · Roughness · Metalness · AO · Height</p>
+      </div>
+      <div class="map-card" id="card-src" style="display:none">
+        <div class="map-card-header"><span class="map-label">SOURCE</span></div>
+        <div class="map-canvas-wrap checker"><canvas id="srcCanvas"></canvas></div>
+      </div>
+      <div class="map-card" id="card-normal" style="display:none">
+        <div class="map-card-header">
+          <span class="map-label">NORMAL</span>
+          <button class="btn btn-ghost btn-sm" onclick="downloadCanvas(normalCanvas,'normal.png')">↓</button>
+        </div>
+        <div class="map-canvas-wrap"><canvas id="normalCanvas"></canvas></div>
+      </div>
+      <div class="map-card" id="card-rough" style="display:none">
+        <div class="map-card-header">
+          <span class="map-label">ROUGHNESS</span>
+          <button class="btn btn-ghost btn-sm" onclick="downloadCanvas(roughCanvas,'roughness.png')">↓</button>
+        </div>
+        <div class="map-canvas-wrap"><canvas id="roughCanvas"></canvas></div>
+      </div>
+      <div class="map-card" id="card-metal" style="display:none">
+        <div class="map-card-header">
+          <span class="map-label">METALNESS</span>
+          <button class="btn btn-ghost btn-sm" onclick="downloadCanvas(metalCanvas,'metalness.png')">↓</button>
+        </div>
+        <div class="map-canvas-wrap"><canvas id="metalCanvas"></canvas></div>
+      </div>
+      <div class="map-card" id="card-ao" style="display:none">
+        <div class="map-card-header">
+          <span class="map-label">AO</span>
+          <button class="btn btn-ghost btn-sm" onclick="downloadCanvas(aoCanvas,'ao.png')">↓</button>
+        </div>
+        <div class="map-canvas-wrap"><canvas id="aoCanvas"></canvas></div>
+      </div>
+      <div class="map-card" id="card-height" style="display:none">
+        <div class="map-card-header">
+          <span class="map-label">HEIGHT</span>
+          <button class="btn btn-ghost btn-sm" onclick="downloadCanvas(heightCanvas,'height.png')">↓</button>
+        </div>
+        <div class="map-canvas-wrap"><canvas id="heightCanvas"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview tab -->
+  <div class="tab-page" id="tab-preview">
+    <div class="preview-area">
+      <div class="empty-state" id="previewEmpty">
+        <div class="empty-icon">💎</div>
+        <p>Generate maps first to see the 3D preview</p>
+      </div>
+      <canvas id="threeCanvas" style="display:none"></canvas>
+      <div class="preview-controls" id="previewCtrlBar" style="display:none">
+        <label>Env Rotation <input type="range" id="envRot" min="0" max="360" value="0" oninput="updateEnv()"> </label>
+        <button class="btn btn-ghost btn-sm" id="toggleWire" onclick="toggleWireframe()">Wireframe</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetCamera()">Reset Cam</button>
+        <span id="meshInfo" style="font-size:11px;color:var(--muted);font-family:var(--font-mono)">Plane</span>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<!-- Three.js + loaders -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+// ──────────────────────────────────────────────
+//  DOM refs
+// ──────────────────────────────────────────────
+const srcCanvas    = document.getElementById('srcCanvas');
+const normalCanvas = document.getElementById('normalCanvas');
+const roughCanvas  = document.getElementById('roughCanvas');
+const metalCanvas  = document.getElementById('metalCanvas');
+const aoCanvas     = document.getElementById('aoCanvas');
+const heightCanvas = document.getElementById('heightCanvas');
+
+let sourceImage = null;
+let mapsGenerated = false;
+
+// ──────────────────────────────────────────────
+//  Slider live values
+// ──────────────────────────────────────────────
+function bindSlider(id, displayId, fmt) {
+  const el = document.getElementById(id);
+  const dv = document.getElementById(displayId);
+  el.addEventListener('input', () => { dv.textContent = fmt(el.value); });
+}
+bindSlider('strength',      'strengthVal',     v => parseFloat(v).toFixed(1));
+bindSlider('blur',          'blurVal',         v => v);
+bindSlider('brightness',    'brightVal',       v => (v >= 0 ? '+' : '') + v);
+bindSlider('contrast',      'contrastVal',     v => (parseFloat(v)/100).toFixed(2));
+bindSlider('gamma',         'gammaVal',        v => parseFloat(v).toFixed(1));
+bindSlider('aoIntensity',   'aoVal',           v => parseFloat(v).toFixed(2));
+bindSlider('heightScale',   'heightScaleVal',  v => parseFloat(v).toFixed(2));
+bindSlider('metalThresh',   'metalThreshVal',  v => v);
+bindSlider('metalPreview',  'metalVal',        v => parseFloat(v).toFixed(2));
+bindSlider('roughPreview',  'roughPreviewVal', v => parseFloat(v).toFixed(2));
+bindSlider('lightIntensity','lightIntVal',     v => parseFloat(v).toFixed(1));
+bindSlider('normalScale',   'normalScaleVal',  v => parseFloat(v).toFixed(2));
+
+// live preview update on param change
+['metalPreview','roughPreview','lightIntensity','normalScale'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { if(mapsGenerated) updateThreeMaterial(); });
+});
+
+// ──────────────────────────────────────────────
+//  Upload image
+// ──────────────────────────────────────────────
+const uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadImage(file);
+});
+document.getElementById('upload').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) loadImage(file);
+});
+
+function loadImage(file) {
+  const img = new Image();
+  img.onload = () => {
+    sourceImage = img;
+    [srcCanvas, normalCanvas, roughCanvas, metalCanvas, aoCanvas, heightCanvas].forEach(c => {
+      c.width = img.width;
+      c.height = img.height;
+    });
+    srcCanvas.getContext('2d').drawImage(img, 0, 0);
+    showCards(false);
+    document.getElementById('card-src').style.display = '';
+    document.getElementById('emptyState').style.display = 'none';
+    setStatus('ready', `${img.width}×${img.height}`);
+    notify('Image loaded — click Generate');
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+function showCards(allVisible) {
+  ['card-normal','card-rough','card-metal','card-ao','card-height'].forEach(id => {
+    document.getElementById(id).style.display = allVisible ? '' : 'none';
+  });
+}
+
+// ──────────────────────────────────────────────
+//  Upload 3D
+// ──────────────────────────────────────────────
+function toggle3DArea() {
+  const a = document.getElementById('area3d');
+  a.classList.toggle('open');
+}
+document.getElementById('upload3d').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  load3DModel(file);
+});
+
+// ──────────────────────────────────────────────
+//  Tabs
+// ──────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', t.textContent.toLowerCase().includes(name) || (name==='maps' && i===0));
+  });
+  document.querySelectorAll('.tab-page').forEach(p => {
+    p.classList.toggle('active', p.id === 'tab-' + name);
+  });
+  if (name === 'preview' && mapsGenerated) initThree();
+}
+
+// ──────────────────────────────────────────────
+//  Map Generation
+// ──────────────────────────────────────────────
+function heightAt(data, w, h, x, y) {
+  x = (x + w) % w;
+  y = (y + h) % h;
+  const i = (y * w + x) * 4;
+  return (data[i] + data[i+1] + data[i+2]) / 765;
+}
+
+function blurCanvas(ctx, w, h, radius) {
+  if (!radius) return;
+  ctx.filter = `blur(${radius}px)`;
+  const tmp = ctx.getImageData(0, 0, w, h);
+  ctx.clearRect(0, 0, w, h);
+  ctx.filter = 'none';
+  const offscreen = document.createElement('canvas');
+  offscreen.width = w; offscreen.height = h;
+  const octx = offscreen.getContext('2d');
+  octx.putImageData(tmp, 0, 0);
+  ctx.filter = `blur(${radius}px)`;
+  ctx.drawImage(offscreen, 0, 0);
+  ctx.filter = 'none';
+}
+
+function generate() {
+  if (!sourceImage) { notify('Please upload an image first'); return; }
+  const w = srcCanvas.width, h = srcCanvas.height;
+
+  // work on a possibly-blurred copy
+  const blurAmount = parseInt(document.getElementById('blur').value);
+  const workCanvas = document.createElement('canvas');
+  workCanvas.width = w; workCanvas.height = h;
+  const wctx = workCanvas.getContext('2d');
+  wctx.filter = blurAmount ? `blur(${blurAmount}px)` : 'none';
+  wctx.drawImage(sourceImage, 0, 0);
+  wctx.filter = 'none';
+  const d = wctx.getImageData(0, 0, w, h).data;
+
+  const strength   = parseFloat(document.getElementById('strength').value);
+  const invertH    = document.getElementById('invertHeight').checked;
+  const dxMode     = document.getElementById('format').value === 'dx';
+  const bright     = parseFloat(document.getElementById('brightness').value);
+  const contrast   = parseFloat(document.getElementById('contrast').value) / 100;
+  const gamma      = parseFloat(document.getElementById('gamma').value);
+  const invertR    = document.getElementById('invertRough').checked;
+  const aoIntensity= parseFloat(document.getElementById('aoIntensity').value);
+  const heightScale= parseFloat(document.getElementById('heightScale').value);
+  const metalThresh= parseInt(document.getElementById('metalThresh').value);
+
+  // — Normal —
+  const nctx = normalCanvas.getContext('2d');
+  const nimg = nctx.createImageData(w, h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let tl=heightAt(d,w,h,x-1,y-1), tc=heightAt(d,w,h,x,y-1), tr=heightAt(d,w,h,x+1,y-1);
+      let ml=heightAt(d,w,h,x-1,y),                               mr=heightAt(d,w,h,x+1,y);
+      let bl=heightAt(d,w,h,x-1,y+1), bc=heightAt(d,w,h,x,y+1), br=heightAt(d,w,h,x+1,y+1);
+      if (invertH) {
+        tl=1-tl; tc=1-tc; tr=1-tr;
+        ml=1-ml; mr=1-mr;
+        bl=1-bl; bc=1-bc; br=1-br;
+      }
+      let gx = (-tl-2*ml-bl) + (tr+2*mr+br);
+      let gy = (-tl-2*tc-tr) + (bl+2*bc+br);
+      let nx = -gx * strength, ny = -gy * strength, nz = 1;
+      const len = Math.sqrt(nx*nx + ny*ny + nz*nz);
+      nx /= len; ny /= len; nz /= len;
+      if (dxMode) ny = -ny;
+      const i = (y*w+x)*4;
+      nimg.data[i]   = (nx*0.5+0.5)*255;
+      nimg.data[i+1] = (ny*0.5+0.5)*255;
+      nimg.data[i+2] = (nz*0.5+0.5)*255;
+      nimg.data[i+3] = 255;
+    }
+  }
+  nctx.putImageData(nimg, 0, 0);
+
+  // — Roughness / Metalness / AO / Height —
+  const rctx = roughCanvas.getContext('2d'); const rimg = rctx.createImageData(w, h);
+  const mctx = metalCanvas.getContext('2d'); const mimg = mctx.createImageData(w, h);
+  const actx = aoCanvas.getContext('2d');    const aimg = actx.createImageData(w, h);
+  const hctx = heightCanvas.getContext('2d'); const himg = hctx.createImageData(w, h);
+
+  for (let i = 0; i < d.length; i += 4) {
+    let v = (d[i] + d[i+1] + d[i+2]) / 3;
+
+    // roughness
+    let rv = ((v - 128) * contrast) + 128 + bright;
+    rv = Math.max(0, Math.min(255, rv));
+    rv = 255 * Math.pow(rv/255, 1/gamma);
+    if (invertR) rv = 255 - rv;
+
+    // metalness (luminance threshold)
+    const mv = v >= metalThresh ? 255 : 0;
+
+    // AO (inverted + intensity)
+    let av = 255 - Math.min(255, (255 - v) * aoIntensity);
+    av = Math.max(0, Math.min(255, av));
+
+    // height
+    let hv = Math.min(255, v * heightScale);
+
+    rimg.data[i]=rimg.data[i+1]=rimg.data[i+2]=rv; rimg.data[i+3]=255;
+    mimg.data[i]=mimg.data[i+1]=mimg.data[i+2]=mv; mimg.data[i+3]=255;
+    aimg.data[i]=aimg.data[i+1]=aimg.data[i+2]=av; aimg.data[i+3]=255;
+    himg.data[i]=himg.data[i+1]=himg.data[i+2]=hv; himg.data[i+3]=255;
+  }
+  rctx.putImageData(rimg, 0, 0);
+  mctx.putImageData(mimg, 0, 0);
+  actx.putImageData(aimg, 0, 0);
+  hctx.putImageData(himg, 0, 0);
+
+  showCards(true);
+  mapsGenerated = true;
+  notify('Maps generated ✓');
+  initThree();
+}
+
+// ──────────────────────────────────────────────
+//  Three.js Preview
+// ──────────────────────────────────────────────
+let threeScene, threeCamera, threeRenderer, threeControls;
+let threeMesh = null, threeLight, threeEnvGroup;
+let wireOn = false;
+let loadedModel = null;
+let threeInitialized = false;
+
+function initThree() {
+  const canvas = document.getElementById('threeCanvas');
+  const container = canvas.parentElement;
+  const W = Math.min(container.clientWidth - 48, 720);
+  const H = Math.min(container.clientHeight - 120, 480);
+
+  if (!threeInitialized) {
+    threeScene = new THREE.Scene();
+    threeScene.background = new THREE.Color(0x0d0d0f);
+    threeCamera = new THREE.PerspectiveCamera(45, W/H, 0.01, 100);
+    threeCamera.position.set(0, 0.5, 2.2);
+    threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    threeRenderer.physicallyCorrectLights = true;
+    threeRenderer.outputEncoding = THREE.sRGBEncoding;
+    threeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+    threeRenderer.toneMappingExposure = 1.2;
+
+    threeControls = new THREE.OrbitControls(threeCamera, canvas);
+    threeControls.enableDamping = true;
+    threeControls.dampingFactor = 0.06;
+
+    // Lights
+    const ambLight = new THREE.AmbientLight(0x334455, 0.6);
+    threeScene.add(ambLight);
+    threeLight = new THREE.PointLight(0xffffff, 2, 20);
+    threeLight.position.set(1.5, 2, 1.5);
+    threeScene.add(threeLight);
+
+    const fillLight = new THREE.DirectionalLight(0x6699ff, 0.4);
+    fillLight.position.set(-2, 1, -1);
+    threeScene.add(fillLight);
+
+    // Env grid
+    const grid = new THREE.GridHelper(6, 20, 0x222233, 0x1a1a2a);
+    grid.position.y = -0.8;
+    threeScene.add(grid);
+
+    threeInitialized = true;
+    animateThree();
+  }
+
+  threeRenderer.setSize(W, H);
+  threeCamera.aspect = W / H;
+  threeCamera.updateProjectionMatrix();
+
+  buildMesh();
+
+  canvas.style.display = 'block';
+  document.getElementById('previewEmpty').style.display = 'none';
+  document.getElementById('previewCtrlBar').style.display = 'flex';
+}
+
+function buildMesh() {
+  if (threeMesh) {
+    threeScene.remove(threeMesh);
+    threeMesh.geometry?.dispose();
+    threeMesh.material?.dispose();
+    threeMesh = null;
+  }
+
+  const mat = buildMaterial();
+
+  let geo;
+  if (loadedModel) {
+    geo = loadedModel.geometry.clone();
+    document.getElementById('meshInfo').textContent = 'Custom Model';
+  } else {
+    geo = new THREE.PlaneGeometry(2, 2, 128, 128);
+    document.getElementById('meshInfo').textContent = 'Flat Plane';
+  }
+
+  threeMesh = new THREE.Mesh(geo, mat);
+  if (!loadedModel) threeMesh.rotation.x = -Math.PI / 2;
+  threeScene.add(threeMesh);
+}
+
+function buildMaterial() {
+  const metalVal  = parseFloat(document.getElementById('metalPreview').value);
+  const roughVal  = parseFloat(document.getElementById('roughPreview').value);
+  const lightInt  = parseFloat(document.getElementById('lightIntensity').value);
+  const nrmScale  = parseFloat(document.getElementById('normalScale').value);
+  if (threeLight) threeLight.intensity = lightInt;
+
+  const mat = new THREE.MeshStandardMaterial({
+    metalness: metalVal,
+    roughness: roughVal,
+    side: THREE.DoubleSide,
+  });
+
+  // Albedo / diffuse from source
+  if (srcCanvas.width) {
+    mat.map = new THREE.CanvasTexture(srcCanvas);
+    mat.map.encoding = THREE.sRGBEncoding;
+  }
+  // Normal
+  if (normalCanvas.width) {
+    mat.normalMap = new THREE.CanvasTexture(normalCanvas);
+    mat.normalScale = new THREE.Vector2(nrmScale, nrmScale);
+  }
+  // Roughness
+  if (roughCanvas.width) {
+    mat.roughnessMap = new THREE.CanvasTexture(roughCanvas);
+  }
+  // Metalness
+  if (metalCanvas.width) {
+    mat.metalnessMap = new THREE.CanvasTexture(metalCanvas);
+  }
+  // AO
+  if (aoCanvas.width) {
+    mat.aoMap = new THREE.CanvasTexture(aoCanvas);
+    mat.aoMapIntensity = 1;
+  }
+
+  return mat;
+}
+
+function updateThreeMaterial() {
+  if (!threeMesh) return;
+  const oldMat = threeMesh.material;
+  threeMesh.material = buildMaterial();
+  oldMat?.dispose();
+}
+
+function animateThree() {
+  requestAnimationFrame(animateThree);
+  if (!threeRenderer || !threeScene || !threeCamera) return;
+  threeControls?.update();
+  threeRenderer.render(threeScene, threeCamera);
+}
+
+function toggleWireframe() {
+  wireOn = !wireOn;
+  if (threeMesh) threeMesh.material.wireframe = wireOn;
+  document.getElementById('toggleWire').style.color = wireOn ? 'var(--accent2)' : '';
+}
+
+function resetCamera() {
+  threeCamera.position.set(0, 0.5, 2.2);
+  threeControls.target.set(0, 0, 0);
+}
+
+function updateEnv() {
+  // rotate light based on env slider
+  const angle = parseFloat(document.getElementById('envRot').value) * Math.PI / 180;
+  if (threeLight) {
+    threeLight.position.x = Math.sin(angle) * 2;
+    threeLight.position.z = Math.cos(angle) * 2;
+  }
+}
+
+// ──────────────────────────────────────────────
+//  Load 3D model
+// ──────────────────────────────────────────────
+function load3DModel(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const url = URL.createObjectURL(file);
+  notify('Loading 3D model…');
+
+  if (ext === 'obj') {
+    const loader = new THREE.OBJLoader();
+    loader.load(url, obj => {
+      obj.traverse(c => { if (c.isMesh) { loadedModel = c; } });
+      if (loadedModel) { notify('OBJ loaded ✓'); if (mapsGenerated) buildMesh(); }
+    }, null, () => notify('OBJ load failed'));
+  } else if (ext === 'gltf' || ext === 'glb') {
+    const loader = new THREE.GLTFLoader();
+    loader.load(url, gltf => {
+      gltf.scene.traverse(c => { if (c.isMesh) { loadedModel = c; } });
+      if (loadedModel) { notify('GLTF loaded ✓'); if (mapsGenerated) buildMesh(); }
+    }, null, () => notify('GLTF load failed'));
+  } else {
+    notify('Unsupported format');
+  }
+}
+
+// ──────────────────────────────────────────────
+//  Utils
+// ──────────────────────────────────────────────
+function downloadCanvas(canvas, name) {
+  if (!canvas.width) { notify('Generate maps first'); return; }
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = name;
+  a.click();
+}
+
+function downloadAll() {
+  const maps = [
+    [normalCanvas,'normal.png'],
+    [roughCanvas,'roughness.png'],
+    [metalCanvas,'metalness.png'],
+    [aoCanvas,'ao.png'],
+    [heightCanvas,'height.png'],
+  ];
+  maps.forEach(([c,n], i) => setTimeout(() => downloadCanvas(c,n), i*200));
+}
+
+function setStatus(state, text) {
+  document.getElementById('statusDot').className = 'dot ' + (state === 'ready' ? 'ready' : '');
+  document.getElementById('statusText').textContent = text;
+}
+
+function notify(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
