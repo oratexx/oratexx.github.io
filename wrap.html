@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Capacitor HTML → APK Guide</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#0f1115;color:#eee;line-height:1.6}
+header{background:#171b22;padding:30px;text-align:center;border-bottom:1px solid #333}
+main{max-width:1000px;margin:auto;padding:25px}
+section{background:#171b22;margin:20px 0;padding:20px;border-radius:12px;border:1px solid #2c313c}
+h1,h2{color:#8df06d}
+pre{background:#0b0d11;padding:12px;border-radius:8px;overflow:auto}
+button{padding:6px 10px;border:none;border-radius:6px;background:#8df06d;color:#111;cursor:pointer}
+ol li{margin:10px 0}
+.note{background:#242d1d;border-left:4px solid #8df06d;padding:10px;border-radius:6px}
+</style>
+<script>
+function copyText(id){
+ navigator.clipboard.writeText(document.getElementById(id).innerText);
+ alert("Copied!");
+}
+</script>
+</head>
+<body>
+<header>
+<h1>HTML → APK (Capacitor) Guide</h1>
+<p>Step-by-step wrapping HTML menjadi aplikasi Android.</p>
+</header>
+
+<main>
+
+<section>
+<h2>1. Install Node.js</h2>
+<p>Download dan install Node.js LTS dari:</p>
+<p>https://nodejs.org/</p>
+</section>
+
+<section>
+<h2>2. Masuk ke Folder Project</h2>
+<pre id="c1">cd path\ke\project</pre>
+<button onclick="copyText('c1')">Copy</button>
+</section>
+
+<section>
+<h2>3. Inisialisasi Project</h2>
+<pre id="c2">npm init -y</pre>
+<button onclick="copyText('c2')">Copy</button>
+</section>
+
+<section>
+<h2>4. Install Capacitor</h2>
+<pre id="c3">npm install @capacitor/core @capacitor/cli @capacitor/android</pre>
+<button onclick="copyText('c3')">Copy</button>
+</section>
+
+<section>
+<h2>5. Inisialisasi Capacitor</h2>
+<pre id="c4">npx cap init</pre>
+<button onclick="copyText('c4')">Copy</button>
+<p>Contoh:</p>
+<ul>
+<li>App Name: My App</li>
+<li>Package ID: com.nama.myapp</li>
+</ul>
+</section>
+
+<section>
+<h2>6. Tambahkan Android</h2>
+<pre id="c5">npx cap add android</pre>
+<button onclick="copyText('c5')">Copy</button>
+</section>
+
+<section>
+<h2>7. Struktur Folder</h2>
+<pre>
+project/
+├── www/
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
+├── android/
+├── capacitor.config.json
+└── package.json
+</pre>
+<p>Jika memakai Vite, ubah <b>webDir</b> menjadi <b>dist</b>.</p>
+</section>
+
+<section>
+<h2>8. Sync</h2>
+<pre id="c6">npx cap sync</pre>
+<button onclick="copyText('c6')">Copy</button>
+</section>
+
+<section>
+<h2>9. Buka Android Studio</h2>
+<pre id="c7">npx cap open android</pre>
+<button onclick="copyText('c7')">Copy</button>
+</section>
+
+<section>
+<h2>10. Build APK</h2>
+<ol>
+<li>Build</li>
+<li>Build APK(s) atau Generate Signed Bundle / APK</li>
+<li>Tunggu hingga muncul "BUILD SUCCESSFUL".</li>
+</ol>
+</section>
+
+<section>
+<h2>FAQ</h2>
+<div class="note">
+<b>Internet?</b><br>
+Ya. Aplikasi tetap bisa menggunakan fetch(), REST API, Cloudflare Workers, Firebase, Supabase, dan layanan online lainnya.
+</div>
+<br>
+<div class="note">
+<b>Edit HTML?</b><br>
+Edit file web → jalankan <code>npx cap sync</code> → build APK lagi.
+</div>
+<br>
+<div class="note">
+<b>Ganti icon?</b><br>
+Gunakan Android Studio → New → Image Asset.
+</div>
+</section>
+
+</main>
+</body>
+</html>
