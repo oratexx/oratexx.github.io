@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MER Texture Packer</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:20px;background:#111;color:#eee;font-family:Arial,sans-serif}
+main{max-width:700px;margin:auto}
+h1{margin-top:0}
+.grid{display:grid;gap:12px}
+.slot{background:#1b1b1b;border:1px solid #333;border-radius:10px;padding:14px}
+.slot h2{margin:0 0 8px;font-size:18px}
+.slot p{margin:0 0 10px;color:#aaa;font-size:13px}
+input[type=file]{width:100%}
+button{margin-top:16px;padding:12px 18px;border:1px solid #555;border-radius:7px;background:#222;color:#fff;cursor:pointer}
+button:hover{background:#333}
+#status{margin-top:12px;color:#aaa;font-size:13px}
+canvas{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>MER Texture Packer</h1>
+
+<div class="grid">
+  <div class="slot">
+    <h2>Metallic</h2>
+    <p>R channel</p>
+    <input id="metallic" type="file" accept="image/*">
+  </div>
+
+  <div class="slot">
+    <h2>Emissive</h2>
+    <p>G channel</p>
+    <input id="emissive" type="file" accept="image/*">
+  </div>
+
+  <div class="slot">
+    <h2>Roughness</h2>
+    <p>B channel</p>
+    <input id="roughness" type="file" accept="image/*">
+  </div>
+</div>
+
+<button id="pack">Pack MER</button>
+<div id="status"></div>
+<canvas id="canvas"></canvas>
+
+<script>
+const files = {
+  metallic: document.getElementById("metallic"),
+  emissive: document.getElementById("emissive"),
+  roughness: document.getElementById("roughness")
+};
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d", {willReadFrequently:true});
+const status = document.getElementById("status");
+
+function loadImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return reject(new Error("Missing input"));
+
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read image"));
+    };
+
+    img.src = url;
+  });
+}
+
+function getPixels(img, width, height) {
+  const c = document.createElement("canvas");
+  c.width = width;
+  c.height = height;
+
+  const cctx = c.getContext("2d", {willReadFrequently:true});
+
+  cctx.drawImage(img, 0, 0, width, height);
+
+  return cctx.getImageData(0, 0, width, height).data;
+}
+
+files.metallic.addEventListener("change", updateSize);
+files.emissive.addEventListener("change", updateSize);
+files.roughness.addEventListener("change", updateSize);
+
+async function updateSize() {
+  const selected = Object.values(files)
+    .map(x => x.files[0])
+    .filter(Boolean);
+
+  if (!selected.length) return;
+
+  try {
+    const imgs = await Promise.all(selected.map(loadImage));
+    const sizes = imgs.map(i => `${i.width}×${i.height}`);
+    status.textContent = "Selected: " + sizes.join(" / ");
+  } catch(e) {
+    status.textContent = e.message;
+  }
+}
+
+document.getElementById("pack").addEventListener("click", async () => {
+  const metallicFile = files.metallic.files[0];
+  const emissiveFile = files.emissive.files[0];
+  const roughnessFile = files.roughness.files[0];
+
+  if (!metallicFile || !emissiveFile || !roughnessFile) {
+    status.textContent = "Choose all three images first.";
+    return;
+  }
+
+  try {
+    status.textContent = "Packing...";
+
+    const [metallic, emissive, roughness] =
+      await Promise.all([
+        loadImage(metallicFile),
+        loadImage(emissiveFile),
+        loadImage(roughnessFile)
+      ]);
+
+    // Output size follows the Metallic input.
+    const width = metallic.width;
+    const height = metallic.height;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const m = getPixels(metallic, width, height);
+    const e = getPixels(emissive, width, height);
+    const r = getPixels(roughness, width, height);
+
+    const output = ctx.createImageData(width, height);
+
+    for (let i = 0; i < output.data.length; i += 4) {
+      // MER:
+      // R = Metallic
+      // G = Emissive
+      // B = Roughness
+      // A = 255
+
+      output.data[i]     = m[i];
+      output.data[i + 1] = e[i];
+      output.data[i + 2] = r[i];
+      output.data[i + 3] = 255;
+    }
+
+    ctx.putImageData(output, 0, 0);
+
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+
+      a.href = url;
+      a.download = "texture_mer.png";
+      a.click();
+
+      URL.revokeObjectURL(url);
+
+      status.textContent =
+        `Done — ${width}×${height} PNG.`;
+    }, "image/png");
+
+  } catch (e) {
+    console.error(e);
+    status.textContent = "Error: " + e.message;
+  }
+});
+</script>
+</main>
+</body>
+</html>
