@@ -71,7 +71,7 @@ figcaption em{margin-left:auto;font-weight:400;color:var(--mu);font-style:normal
 </header>
 <div class="app">
 <aside>
-  <label class="up" id="up"><input type="file" id="file" accept="image/*"><b>Klik, seret, atau tempel (Ctrl+V)</b>Gambar tekstur PNG, JPG, WebP</label>
+  <label class="up" id="up"><input type="file" id="file" accept="image/*" multiple><b>Klik, seret, atau tempel (Ctrl+V)</b>Gambar sumber untuk auto-generate. Banyak file boleh: nama berisi normal, rough, metal, ao, atau height langsung masuk ke slotnya.</label>
   <div class="chips" id="chips"></div>
   <div id="ctrls"></div>
   <details><summary>Model &amp; environment</summary>
@@ -106,9 +106,9 @@ const GROUPS=[
 ['Roughness',[['r','rb','Kecerahan',-.5,.5,.01,0],['r','rc','Kontras',.2,3,.05,1],['r','rg','Gamma',.3,3,.05,1],['t','rinv','Balik roughness',0]]],
 ['Metalness',[['t','mon','Aktifkan',0],['r','mt','Ambang',0,1,.01,.5],['r','ms','Kelembutan',0,.5,.01,.05]]]];
 const PV=[['s','view','Tampilan',[['lit','PBR penuh'],['clay','Clay (tanpa albedo)'],['albedo','Albedo'],['normal','Normal'],['rough','Roughness'],['metal','Metalness'],['ao','AO'],['height','Height']],'lit'],
-['s','shape','Bentuk',[['plane','Bidang'],['sphere','Bola'],['cube','Kubus'],['ref','Bola kalibrasi']],'sphere'],
+['s','shape','Bentuk',[['plane','Bidang tegak (dinding)'],['floor','Bidang datar (lantai)'],['sphere','Bola'],['cube','Kubus'],['ref','Bola kalibrasi']],'sphere'],
 ['s','env','Environment (IBL)',[['studio','Studio'],['sky','Langit'],['grid','Grid refleksi'],['furnace','Furnace putih']],'studio'],
-['r','ei','Intensitas IBL',0,4,.05,1],['t','bg','Tampilkan latar',1],
+['r','ei','Intensitas IBL',0,4,.05,1],['t','refl','Refleksi lantai (planar)',1],['r','rs','Kekuatan refleksi',0,2,.05,1],['t','bg','Tampilkan latar',1],
 ['s','tone','Tone mapping',[['aces','ACES'],['none','Linear (tanpa)'],['reinhard','Reinhard'],['cineon','Cineon']],'aces'],['r','exp','Exposure',.2,3,.05,1],
 ['t','umap','Pakai peta rough/metal/AO',1],['r','pm','Metalness ×',0,1,.01,1],['r','pr','Roughness ×',0,1,.01,1],['r','pn','Normal',0,3,.05,1],['r','pa','AO',0,2,.05,1],['r','pd','Displacement',0,.3,.005,.05],['r','pt','Tiling',1,8,1,1],['r','pli','Lampu langsung',0,6,.1,1],['r','pl','Arah lampu',0,360,1,45],['t','wire','Wireframe',0],['t','rot','Putar otomatis',0]];
 const PRE={
@@ -134,16 +134,19 @@ document.addEventListener('input',e=>{const el=e.target;if(!el.id||!(el.id in P)
 $('#chips').innerHTML=Object.keys(PRE).map(n=>`<button class="b g s" data-p="${n}">${n}</button>`).join('');
 $('#chips').onclick=e=>{const n=e.target.dataset.p;if(n){setAll({...DM,...PRE[n]});run()}};
 
-$('#grid').innerHTML=MAPS.map(([k,l])=>`<figure class=card id=c_${k} hidden><figcaption><span>${l}</span><em id=d_${k}></em><button class="b g s" onclick="dl('${k}')" title="Unduh PNG">↓</button></figcaption><div class=cw><canvas id=cv_${k}></canvas></div></figure>`).join('');
+$('#grid').innerHTML=MAPS.map(([k,l])=>`<figure class=card id=c_${k} hidden><figcaption><span>${l}</span><em id=d_${k}></em>${k=='orm'?'':`<label class="b g s" title="Unggah peta sendiri">↑<input type=file accept="image/*" hidden onchange="ov('${k}',this.files[0]);this.value=''"></label><button class="b g s" id=r_${k} hidden onclick="ov('${k}')" title="Kembali ke hasil auto">⟲</button>`}<button class="b g s" onclick="dl('${k}')" title="Unduh PNG">↓</button></figcaption><div class=cw><canvas id=cv_${k}></canvas></div></figure>`).join('');
 MAPS.forEach(([k])=>{cv[k]=$('#cv_'+k);cv[k].onclick=()=>cv[k].closest('.card').classList.toggle('big')});
 
 // ── input gambar ──
 function load(f){if(!f||!f.type.startsWith('image/'))return;const im=new Image();im.onload=()=>setSrc(im);im.onerror=()=>notify('Gambar tidak bisa dibaca');im.src=URL.createObjectURL(f)}
 function setSrc(im){src=im;run()}
-$('#file').onchange=e=>load(e.target.files[0]);
+const OV={},KEYS=[['normal',/norm|nrm/i],['rough',/rough|rgh/i],['metal',/metal|mtl/i],['ao',/(^|[^a-z])ao([^a-z]|$)|occlusion/i],['height',/height|disp|bump/i]];
+function ov(k,f){if(!f){delete OV[k];return run()}const im=new Image();im.onload=()=>{OV[k]=im;sched()};im.onerror=()=>notify('Gambar tidak bisa dibaca');im.src=URL.createObjectURL(f)}
+function loadFiles(fs){fs=[...fs].filter(f=>f.type.startsWith('image/'));let n=0;for(const f of fs){const nm=f.name.replace(/\.[^.]+$/,''),h=KEYS.find(x=>x[1].test(nm));if(h){ov(h[0],f);n++}else load(f)}n&&notify(n+' peta kustom dimuat')}
+$('#file').onchange=e=>loadFiles(e.target.files);
 addEventListener('dragover',e=>{e.preventDefault();$('#up').classList.add('hot')});
 addEventListener('dragleave',e=>{if(!e.relatedTarget)$('#up').classList.remove('hot')});
-addEventListener('drop',e=>{e.preventDefault();$('#up').classList.remove('hot');load(e.dataTransfer.files[0])});
+addEventListener('drop',e=>{e.preventDefault();$('#up').classList.remove('hot');loadFiles(e.dataTransfer.files)});
 addEventListener('paste',e=>{const f=[...(e.clipboardData?.files||[])].find(f=>f.type.startsWith('image/'));f&&load(f)});
 
 // ── gambar contoh: dinding bata seamless ──
@@ -165,9 +168,9 @@ function blur(a,w,h,r,wr){if(!r)return a.slice();let t=a;const o=new Float32Arra
 const g3=(I,k,v)=>{I.data[k]=I.data[k+1]=I.data[k+2]=v*255;I.data[k+3]=255};
 function sched(){clearTimeout(tm);tm=setTimeout(run,90)}
 function run(){if(!src)return;const t0=performance.now();
- const m=Math.min(1,P.res/Math.max(src.width,src.height)),w=Math.round(src.width*m),h=Math.round(src.height*m),n=w*h;
+ const b=Object.values(OV)[0]||src,m=Math.min(1,P.res/Math.max(b.width,b.height)),w=Math.round(b.width*m),h=Math.round(b.height*m),n=w*h;
  for(const[k]of MAPS){cv[k].width=w;cv[k].height=h}
- const ac=cv.albedo.getContext('2d');ac.drawImage(src,0,0,w,h);const d=ac.getImageData(0,0,w,h).data;
+ const tc=document.createElement('canvas');tc.width=w;tc.height=h;const tx=tc.getContext('2d');tx.drawImage(src,0,0,w,h);const d=tx.getImageData(0,0,w,h).data;cv.albedo.getContext('2d').drawImage(OV.albedo||src,0,0,w,h);
  const L=new Float32Array(n);for(let i=0;i<n;i++)L[i]=(.2126*d[i*4]+.7152*d[i*4+1]+.0722*d[i*4+2])/255;
  const H=blur(L,w,h,P.blur,P.wrap);for(let i=0;i<n;i++){const v=clamp((H[i]-.5)*P.hc+.5+P.hb);H[i]=P.invH?1-v:v}
  const B=blur(H,w,h,P.aor,P.wrap),mk=()=>new ImageData(w,h),N=mk(),R=mk(),M=mk(),A=mk(),Hh=mk(),O=mk();
@@ -183,10 +186,13 @@ function run(){if(!src)return;const t0=performance.now();
   let rv=Math.pow(clamp((l-.5)*P.rc+.5+P.rb),ig);if(P.rinv)rv=1-rv;
   const t=clamp((l-P.mt+P.ms)/(2*P.ms+1e-4)),mv=P.mon?t*t*(3-2*t):0,
         av=1-Math.min(1,Math.max(0,B[i]-H[i])*P.aoi*6);
-  g3(R,k,rv);g3(M,k,mv);g3(A,k,av);g3(Hh,k,H[i]);
-  O.data[k]=av*255;O.data[k+1]=rv*255;O.data[k+2]=mv*255;O.data[k+3]=255}
- [['normal',N],['rough',R],['metal',M],['ao',A],['height',Hh],['orm',O]].forEach(([k,I])=>cv[k].getContext('2d').putImageData(I,0,0));
- MAPS.forEach(([k])=>{$('#c_'+k).hidden=false;$('#d_'+k).textContent=w+'×'+h});
+  g3(R,k,rv);g3(M,k,mv);g3(A,k,av);g3(Hh,k,H[i]);}
+ [['normal',N],['rough',R],['metal',M],['ao',A],['height',Hh]].forEach(([k,I])=>cv[k].getContext('2d').putImageData(I,0,0));
+ for(const k in OV)if(k!='albedo')cv[k].getContext('2d').drawImage(OV[k],0,0,w,h);
+ const px=k=>cv[k].getContext('2d').getImageData(0,0,w,h).data,a_=px('ao'),r_=px('rough'),m_=px('metal');
+ for(let i=0;i<n*4;i+=4){O.data[i]=a_[i];O.data[i+1]=r_[i];O.data[i+2]=m_[i];O.data[i+3]=255}
+ cv.orm.getContext('2d').putImageData(O,0,0);
+ MAPS.forEach(([k])=>{$('#c_'+k).hidden=false;$('#d_'+k).textContent=w+'×'+h+(OV[k]?' · kustom':'');const r=$('#r_'+k);if(r)r.hidden=!OV[k]});
  $('#dot').className='ok';$('#stt').textContent=`${w}×${h} · ${Math.round(performance.now()-t0)} ms`;
  if(T){allTex().forEach(t=>t.needsUpdate=true);applyMat()}
  if(tabP)showPrev()}
@@ -200,9 +206,9 @@ function initThree(){if(T)return;const c=$('#three'),r=new THREE.WebGLRenderer({
  const tex={};for(const k of['albedo','normal','orm','height']){const t=tex[k]=new THREE.CanvasTexture(cv[k]);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8}
  tex.albedo.encoding=THREE.sRGBEncoding;
  const mat=new THREE.MeshStandardMaterial({map:tex.albedo,normalMap:tex.normal,roughnessMap:tex.orm,metalnessMap:tex.orm,aoMap:tex.orm,displacementMap:tex.height,side:THREE.DoubleSide});
- T={r,sc,cam,ctl,L,tex,mat,mesh:null,shape:null,dt:{},bgc:new THREE.Color(0x08080a),dbg:new THREE.MeshBasicMaterial({side:THREE.DoubleSide,toneMapped:false})};new ResizeObserver(fit).observe($('#stage'))}
+ T={r,sc,cam,ctl,L,tex,mat,mesh:null,shape:null,prop:null,vc:new THREE.PerspectiveCamera(),tm:new THREE.Matrix4(),rt2:new THREE.WebGLRenderTarget(1024,1024),dt:{},bgc:new THREE.Color(0x08080a),dbg:new THREE.MeshBasicMaterial({side:THREE.DoubleSide,toneMapped:false})};mat.onBeforeCompile=patch;new ResizeObserver(fit).observe($('#stage'))}
 function fit(){const s=$('#stage');if(!T||!s.clientWidth)return;T.r.setSize(s.clientWidth,s.clientHeight,false);T.cam.aspect=s.clientWidth/s.clientHeight;T.cam.updateProjectionMatrix()}
-function geo(){const s=P.shape;const g=s=='plane'?new THREE.PlaneGeometry(2,2,256,256):s=='sphere'?new THREE.SphereGeometry(1,160,120):s=='cube'?new THREE.BoxGeometry(1.5,1.5,1.5,80,80,80):MODEL.clone();
+function geo(){const s=P.shape;const g=s=='plane'?new THREE.PlaneGeometry(2,2,256,256):s=='floor'?new THREE.PlaneGeometry(4,4,300,300):s=='sphere'?new THREE.SphereGeometry(1,160,120):s=='cube'?new THREE.BoxGeometry(1.5,1.5,1.5,80,80,80):MODEL.clone();
  if(!g.attributes.normal)g.computeVertexNormals();if(g.attributes.uv)g.setAttribute('uv2',g.attributes.uv);return g}
 const allTex=()=>Object.values(T.tex).concat(Object.values(T.dt));
 const mkDbg=k=>{const t=new THREE.CanvasTexture(cv[k]);t.encoding=THREE.sRGBEncoding;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t};
@@ -210,7 +216,10 @@ function refGroup(){const g=new THREE.Group(),sp=new THREE.SphereGeometry(.42,48
  for(let j=0;j<2;j++)for(let i=0;i<5;i++){const s=new THREE.Mesh(sp,new THREE.MeshStandardMaterial({color:j?0xffc978:0xdddddd,metalness:j,roughness:i/4}));s.position.set(i-2,.5-j,0);g.add(s)}return g}
 function applyMat(){if(!T)return;const m=T.mat,v=P.view,lit=v=='lit'||v=='clay';
  if(T.shape!==P.shape){T.shape=P.shape;if(T.mesh){T.sc.remove(T.mesh);T.mesh.traverse(c=>c.geometry&&c.geometry.dispose())}
-  T.mesh=P.shape=='ref'?refGroup():new THREE.Mesh(geo(),m);T.sc.add(T.mesh);T.cam.position.set(0,.3,P.shape=='ref'?7:3.4);T.ctl.target.set(0,0,0)}
+  T.mesh=P.shape=='ref'?refGroup():new THREE.Mesh(geo(),m);const fl=P.shape=='floor';if(fl)T.mesh.rotation.x=-Math.PI/2;T.sc.add(T.mesh);
+  if(T.prop){T.sc.remove(T.prop);T.prop.geometry.dispose();T.prop.material.dispose();T.prop=null}
+  if(fl){T.prop=new THREE.Mesh(new THREE.SphereGeometry(.4,64,48),new THREE.MeshStandardMaterial({color:0xe8a15a,metalness:.1,roughness:.3}));T.prop.position.set(0,.4,0);T.sc.add(T.prop)}
+  T.cam.position.set(...({ref:[0,.3,7],floor:[0,1.5,3.8]}[P.shape]||[0,.3,3.4]));T.ctl.target.set(0,fl?.2:0,0);T.ctl.maxPolarAngle=fl?Math.PI/2-.05:Math.PI}
  if(T.envKey!==P.env){T.envKey=P.env;buildEnv()}
  T.sc.background=P.bg?T.rt.texture:T.bgc;
  T.r.toneMapping={aces:THREE.ACESFilmicToneMapping,none:THREE.NoToneMapping,reinhard:THREE.ReinhardToneMapping,cineon:THREE.CineonToneMapping}[P.tone];T.r.toneMappingExposure=P.exp;
@@ -218,9 +227,23 @@ function applyMat(){if(!T)return;const m=T.mat,v=P.view,lit=v=='lit'||v=='clay';
  const sg=v+P.umap+P.tone;if(T.sig!==sg){T.sig=sg;m.needsUpdate=true}
  if(!lit){const d=T.dt[v]||(T.dt[v]=mkDbg(v));if(T.dbg.map!==d){T.dbg.map=d;T.dbg.needsUpdate=true}}
  if(T.mesh.isMesh)T.mesh.material=lit?m:T.dbg;else T.mesh.traverse(c=>c.isMesh&&(c.material.envMapIntensity=P.ei));
- m.envMapIntensity=P.ei;m.metalness=P.pm;m.roughness=P.pr;m.normalScale.set(P.pn,P.pn*(P.fmt=='dx'?-1:1));m.aoMapIntensity=P.pa;m.displacementScale=P.pd;m.displacementBias=-P.pd/2;m.wireframe=T.dbg.wireframe=P.wire;
+ m.envMapIntensity=P.ei;if(T.prop)T.prop.material.envMapIntensity=P.ei;m.metalness=P.pm;m.roughness=P.pr;m.normalScale.set(P.pn,P.pn*(P.fmt=='dx'?-1:1));m.aoMapIntensity=P.pa;m.displacementScale=P.pd;m.displacementBias=-P.pd/2;m.wireframe=T.dbg.wireframe=P.wire;
  for(const t of allTex())t.repeat.set(P.pt,P.pt);
  T.L.intensity=P.pli;const a=P.pl*Math.PI/180;T.L.position.set(Math.sin(a)*3,2.5,Math.cos(a)*3);T.ctl.autoRotate=P.rot}
+
+// ── refleksi planar (lantai): kekuatan dari metalness, roughness, fresnel ──
+function patch(sh){sh.uniforms.tR={value:T.rt2.texture};sh.uniforms.tM={value:T.tm};sh.uniforms.uK={value:0};T.u=sh.uniforms;
+ sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform mat4 tM;varying vec4 vRc;').replace('#include <project_vertex>','#include <project_vertex>\nvRc=tM*modelMatrix*vec4(transformed,1.0);');
+ sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D tR;uniform float uK;varying vec4 vRc;').replace('#include <tonemapping_fragment>',`#include <tonemapping_fragment>
+ if(uK>0.){vec2 uv=vRc.xy/vRc.w+normal.xy*.04;float r=roughnessFactor;vec3 rc=texture2D(tR,uv).rgb*.2;
+  for(int i=0;i<8;i++){float a=float(i)*.785398;rc+=texture2D(tR,uv+vec2(cos(a),sin(a))*r*.03).rgb*.1;}
+  float nv=saturate(dot(normalize(normal),normalize(vViewPosition))),f0=mix(.04,1.,metalnessFactor),F=f0+(1.-f0)*pow(1.-nv,5.);
+  float k=clamp(F*pow(1.-r,2.)*uK,0.,1.);gl_FragColor.rgb=mix(gl_FragColor.rgb,rc*mix(vec3(1.),diffuseColor.rgb,metalnessFactor),k);}`)}
+function reflect(){const on=P.shape=='floor'&&P.refl&&T.mesh.isMesh;if(T.u)T.u.uK.value=on?P.rs:0;if(!on)return;
+ const c=T.cam,v=T.vc,t=T.ctl.target,m=T.mesh;
+ v.position.set(c.position.x,-c.position.y,c.position.z);v.up.set(0,-1,0);v.lookAt(t.x,-t.y,t.z);v.projectionMatrix.copy(c.projectionMatrix);v.updateMatrixWorld();v.matrixWorldInverse.copy(v.matrixWorld).invert();
+ T.tm.set(.5,0,0,.5,0,.5,0,.5,0,0,.5,.5,0,0,0,1).multiply(v.projectionMatrix).multiply(v.matrixWorldInverse);
+ m.visible=false;const cur=T.r.getRenderTarget();T.r.setRenderTarget(T.rt2);T.r.render(T.sc,v);T.r.setRenderTarget(cur);m.visible=true}
 
 // ── environment / IBL ──
 function envTex(n){const W=1024,H=512,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
@@ -243,7 +266,7 @@ $('#cf').onchange=async e=>{let fs=[...e.target.files];if(fs.length!=6)return no
  try{const ims=await Promise.all(fs.map(f=>new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=URL.createObjectURL(f)})));
   if(new Set(ims.map(i=>i.width+'x'+i.height)).size>1||ims[0].width!=ims[0].height)return notify('Keenam sisi harus persegi dan berukuran sama');
   const t=new THREE.CubeTexture(ims);t.encoding=THREE.sRGBEncoding;t.needsUpdate=true;CUSTOM=t;useCustom('cubemap')}catch(x){notify('Cubemap gagal dimuat')}};
-function tick(){if(!tabP)return;cancelAnimationFrame(raf);raf=requestAnimationFrame(tick);T.ctl.update();T.r.render(T.sc,T.cam)}
+function tick(){if(!tabP)return;cancelAnimationFrame(raf);raf=requestAnimationFrame(tick);T.ctl.update();reflect();T.r.render(T.sc,T.cam)}
 function showPrev(){initThree();applyMat();fit();tick()}
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{tabP=b.dataset.t=='prev';
  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x==b));
