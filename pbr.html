@@ -100,8 +100,8 @@ const MAPS=[['albedo','Albedo'],['normal','Normal'],['rough','Roughness'],['meta
 // r=slider [t,id,label,min,max,step,val]  t=toggle [t,id,label,val]  s=select [t,id,label,options,val]
 const GROUPS=[
 ['Gambar',[['s','res','Resolusi maks.',[[512,'512 px'],[1024,'1024 px'],[2048,'2048 px'],[4096,'4096 px']],1024],['t','wrap','Tileable (seamless)',1]]],
-['Height',[['r','blur','Blur awal',0,20,1,0],['r','hc','Kontras',.2,3,.05,1],['r','hb','Kecerahan',-.5,.5,.01,0],['t','invH','Balik height',0]]],
-['Normal',[['r','str','Kekuatan',.1,20,.1,4],['s','fmt','Format',[['gl','OpenGL (Y+)'],['dx','DirectX (Y−)']],'gl']]],
+['Grayscale → Height (sumber normal)',[['s','hsrc','Sumber',[['albedo','Gambar sumber'],['height','Peta height kustom (jika ada)']],'albedo'],['s','gm','Konversi grayscale',[['lum','Luminance Rec.709'],['l601','Luminance Rec.601'],['avg','Rata-rata RGB'],['r','Channel R'],['g','Channel G'],['b','Channel B'],['max','Maks RGB (HSV value)'],['min','Min RGB'],['sat','Saturasi']],'lum'],['r','blur','Blur awal',0,20,1,0],['t','hauto','Auto-levels',0],['r','hbp','Titik hitam',0,.95,.01,0],['r','hwp','Titik putih',.05,1,.01,1],['r','hg','Gamma',.3,3,.05,1],['r','hc','Kontras',.2,4,.05,1],['r','hb','Kecerahan',-.5,.5,.01,0],['t','invH','Balik height',0]]],
+['Normal',[['r','str','Kekuatan',.1,20,.1,4],['s','nk','Kernel',[['sobel','Sobel 3×3'],['scharr','Scharr (lebih akurat)'],['cen','Central diff (tajam)']],'sobel'],['r','nlg','Bentuk besar',0,3,.05,1],['r','nd','Detail halus',0,3,.05,1],['s','fmt','Format',[['gl','OpenGL (Y+)'],['dx','DirectX (Y−)']],'gl']]],
 ['Ambient Occlusion',[['r','aor','Radius',1,40,1,10],['r','aoi','Intensitas',0,3,.05,1]]],
 ['Roughness',[['r','rb','Kecerahan',-.5,.5,.01,0],['r','rc','Kontras',.2,3,.05,1],['r','rg','Gamma',.3,3,.05,1],['t','rinv','Balik roughness',0]]],
 ['Metalness',[['t','mon','Aktifkan',0],['r','mt','Ambang',0,1,.01,.5],['r','ms','Kelembutan',0,.5,.01,.05]]]];
@@ -110,7 +110,7 @@ const PV=[['s','view','Tampilan',[['lit','PBR penuh'],['clay','Clay (tanpa albed
 ['s','env','Environment (IBL)',[['studio','Studio'],['sky','Langit'],['grid','Grid refleksi'],['furnace','Furnace putih']],'studio'],
 ['r','ei','Intensitas IBL',0,4,.05,1],['t','refl','Refleksi lantai (planar)',1],['r','rs','Kekuatan refleksi',0,2,.05,1],['t','bg','Tampilkan latar',1],
 ['s','tone','Tone mapping',[['aces','ACES'],['none','Linear (tanpa)'],['reinhard','Reinhard'],['cineon','Cineon']],'aces'],['r','exp','Exposure',.2,3,.05,1],
-['t','umap','Pakai peta rough/metal/AO',1],['r','pm','Metalness ×',0,1,.01,1],['r','pr','Roughness ×',0,1,.01,1],['r','pn','Normal',0,3,.05,1],['r','pa','AO',0,2,.05,1],['r','pd','Displacement',0,.3,.005,.05],['r','pt','Tiling',1,8,1,1],['r','pli','Lampu langsung',0,6,.1,1],['r','pl','Arah lampu',0,360,1,45],['t','wire','Wireframe',0],['t','rot','Putar otomatis',0]];
+['t','umap','Pakai peta rough/metal/AO',1],['t','ovr','Roughness: pakai slider (abaikan peta)',0],['t','ovm','Metalness: pakai slider (abaikan peta)',0],['r','pm','Metalness ×',0,1,.01,1],['r','pr','Roughness ×',0,1,.01,1],['r','pn','Normal',0,3,.05,1],['r','pa','AO',0,2,.05,1],['r','pd','Displacement',0,.3,.005,.05],['r','pt','Tiling',1,8,1,1],['r','pli','Lampu langsung',0,6,.1,1],['r','pl','Arah lampu',0,360,1,45],['t','wire','Wireframe',0],['t','rot','Putar otomatis',0]];
 const PRE={
  Batu:{str:5,hc:1.3,aor:12,aoi:1.2,rc:1.2,rb:.1,mon:0},
  Logam:{str:2,blur:0,hc:1,aor:6,aoi:.8,rc:1.6,rb:-.1,rinv:1,mon:1,mt:.5,ms:.15},
@@ -131,8 +131,8 @@ function rd(el){P[el.id]=el.type=='checkbox'?el.checked:(isNaN(el.value)?el.valu
 function setAll(o){for(const k in o){const el=$('#'+k);if(!el)continue;el.type=='checkbox'?el.checked=!!o[k]:el.value=o[k];rd(el)}}
 setAll(DEF);
 document.addEventListener('input',e=>{const el=e.target;if(!el.id||!(el.id in P))return;rd(el);PVIDS.has(el.id)?applyMat():sched()});
-$('#chips').innerHTML=Object.keys(PRE).map(n=>`<button class="b g s" data-p="${n}">${n}</button>`).join('');
-$('#chips').onclick=e=>{const n=e.target.dataset.p;if(n){setAll({...DM,...PRE[n]});run()}};
+$('#chips').innerHTML=Object.keys(PRE).map(n=>`<button class="b g s" data-p="${n}">${n}</button>`).join('')+'<button class="b g s" data-p="Cermin" title="Roughness 0, Metalness 1, abaikan peta">Tes cermin</button>';
+$('#chips').onclick=e=>{const n=e.target.dataset.p;if(n=='Cermin'){setAll({ovr:1,ovm:1,pr:0,pm:1,rs:1,refl:1});applyMat();notify('Roughness 0, Metalness 1 (dari slider)')}else if(n){setAll({...DM,...PRE[n]});run()}};
 
 $('#grid').innerHTML=MAPS.map(([k,l])=>`<figure class=card id=c_${k} hidden><figcaption><span>${l}</span><em id=d_${k}></em>${k=='orm'?'':`<label class="b g s" title="Unggah peta sendiri">↑<input type=file accept="image/*" hidden onchange="ov('${k}',this.files[0]);this.value=''"></label><button class="b g s" id=r_${k} hidden onclick="ov('${k}')" title="Kembali ke hasil auto">⟲</button>`}<button class="b g s" onclick="dl('${k}')" title="Unduh PNG">↓</button></figcaption><div class=cw><canvas id=cv_${k}></canvas></div></figure>`).join('');
 MAPS.forEach(([k])=>{cv[k]=$('#cv_'+k);cv[k].onclick=()=>cv[k].closest('.card').classList.toggle('big')});
@@ -166,19 +166,27 @@ function pass(s,d,n,ln,st,ls,r,wr){const k=2*r+1,at=(b,i)=>s[b+(wr?((i%n)+n)%n:i
 function blur(a,w,h,r,wr){if(!r)return a.slice();let t=a;const o=new Float32Array(a.length),u=new Float32Array(a.length);
  for(let i=0;i<2;i++){pass(t,o,w,h,1,w,r,wr);pass(o,u,h,w,w,1,r,wr);t=u}return u}
 const g3=(I,k,v)=>{I.data[k]=I.data[k+1]=I.data[k+2]=v*255;I.data[k+3]=255};
+function gd(im,w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.drawImage(im,0,0,w,h);return x.getImageData(0,0,w,h).data}
 function sched(){clearTimeout(tm);tm=setTimeout(run,90)}
 function run(){if(!src)return;const t0=performance.now();
  const b=Object.values(OV)[0]||src,m=Math.min(1,P.res/Math.max(b.width,b.height)),w=Math.round(b.width*m),h=Math.round(b.height*m),n=w*h;
  for(const[k]of MAPS){cv[k].width=w;cv[k].height=h}
  const tc=document.createElement('canvas');tc.width=w;tc.height=h;const tx=tc.getContext('2d');tx.drawImage(src,0,0,w,h);const d=tx.getImageData(0,0,w,h).data;cv.albedo.getContext('2d').drawImage(OV.albedo||src,0,0,w,h);
  const L=new Float32Array(n);for(let i=0;i<n;i++)L[i]=(.2126*d[i*4]+.7152*d[i*4+1]+.0722*d[i*4+2])/255;
- const H=blur(L,w,h,P.blur,P.wrap);for(let i=0;i<n;i++){const v=clamp((H[i]-.5)*P.hc+.5+P.hb);H[i]=P.invH?1-v:v}
+ const hd=P.hsrc=='height'&&OV.height?gd(OV.height,w,h):d,G=new Float32Array(n),gm=P.gm;
+ for(let i=0;i<n;i++){const k=i*4,r=hd[k]/255,g=hd[k+1]/255,b=hd[k+2]/255;
+  G[i]=gm=='r'?r:gm=='g'?g:gm=='b'?b:gm=='avg'?(r+g+b)/3:gm=='l601'?.299*r+.587*g+.114*b:gm=='max'?Math.max(r,g,b):gm=='min'?Math.min(r,g,b):gm=='sat'?Math.max(r,g,b)-Math.min(r,g,b):.2126*r+.7152*g+.0722*b}
+ const H=blur(G,w,h,P.blur,P.wrap);let lo=0,hi=1;
+ if(P.hauto){lo=1;hi=0;for(let i=0;i<n;i++){const v=H[i];if(v<lo)lo=v;if(v>hi)hi=v}}
+ const rg=Math.max(hi-lo,1e-4),lw=Math.max(P.hwp-P.hbp,.01),ih=1/P.hg;
+ for(let i=0;i<n;i++){let v=clamp((clamp((H[i]-lo)/rg)-P.hbp)/lw);v=clamp((Math.pow(v,ih)-.5)*P.hc+.5+P.hb);H[i]=P.invH?1-v:v}
  const B=blur(H,w,h,P.aor,P.wrap),mk=()=>new ImageData(w,h),N=mk(),R=mk(),M=mk(),A=mk(),Hh=mk(),O=mk();
- const s=P.str*w/1024,sg=P.fmt=='dx'?-1:1,wr=P.wrap;
+ let Hn=H;if(P.nd!=1||P.nlg!=1){const Bg=blur(H,w,h,Math.max(2,Math.round(8*w/1024)),P.wrap);Hn=new Float32Array(n);for(let i=0;i<n;i++)Hn[i]=Bg[i]*P.nlg+(H[i]-Bg[i])*P.nd}
+ const[wo,wc,nm]={sobel:[1,2,1],scharr:[3,10,.25],cen:[0,1,4]}[P.nk],s=P.str*nm*w/1024,sg=P.fmt=='dx'?-1:1,wr=P.wrap;
  for(let y=0;y<h;y++){const ym=(wr?(y+h-1)%h:Math.max(0,y-1))*w,y0=y*w,yp=(wr?(y+1)%h:Math.min(h-1,y+1))*w;
   for(let x=0;x<w;x++){const xm=wr?(x+w-1)%w:Math.max(0,x-1),xp=wr?(x+1)%w:Math.min(w-1,x+1);
-   const gx=H[ym+xp]+2*H[y0+xp]+H[yp+xp]-H[ym+xm]-2*H[y0+xm]-H[yp+xm],
-         gy=H[yp+xm]+2*H[yp+x]+H[yp+xp]-H[ym+xm]-2*H[ym+x]-H[ym+xp],
+   const gx=wo*(Hn[ym+xp]+Hn[yp+xp]-Hn[ym+xm]-Hn[yp+xm])+wc*(Hn[y0+xp]-Hn[y0+xm]),
+         gy=wo*(Hn[yp+xm]+Hn[yp+xp]-Hn[ym+xm]-Hn[ym+xp])+wc*(Hn[yp+x]-Hn[ym+x]),
          nx=-gx*s,ny=gy*s*sg,l=Math.hypot(nx,ny,1),k=(y0+x)*4;
    N.data[k]=(nx/l*.5+.5)*255;N.data[k+1]=(ny/l*.5+.5)*255;N.data[k+2]=(.5/l+.5)*255;N.data[k+3]=255}}
  const ig=1/P.rg;
@@ -223,8 +231,8 @@ function applyMat(){if(!T)return;const m=T.mat,v=P.view,lit=v=='lit'||v=='clay';
  if(T.envKey!==P.env){T.envKey=P.env;buildEnv()}
  T.sc.background=P.bg?T.rt.texture:T.bgc;
  T.r.toneMapping={aces:THREE.ACESFilmicToneMapping,none:THREE.NoToneMapping,reinhard:THREE.ReinhardToneMapping,cineon:THREE.CineonToneMapping}[P.tone];T.r.toneMappingExposure=P.exp;
- m.map=v=='clay'?null:T.tex.albedo;m.roughnessMap=m.metalnessMap=m.aoMap=P.umap?T.tex.orm:null;
- const sg=v+P.umap+P.tone;if(T.sig!==sg){T.sig=sg;m.needsUpdate=true}
+ m.map=v=='clay'?null:T.tex.albedo;m.aoMap=P.umap?T.tex.orm:null;m.roughnessMap=P.umap&&!P.ovr?T.tex.orm:null;m.metalnessMap=P.umap&&!P.ovm?T.tex.orm:null;
+ const sg=v+P.umap+P.tone+P.ovr+P.ovm;if(T.sig!==sg){T.sig=sg;m.needsUpdate=true}
  if(!lit){const d=T.dt[v]||(T.dt[v]=mkDbg(v));if(T.dbg.map!==d){T.dbg.map=d;T.dbg.needsUpdate=true}}
  if(T.mesh.isMesh)T.mesh.material=lit?m:T.dbg;else T.mesh.traverse(c=>c.isMesh&&(c.material.envMapIntensity=P.ei));
  m.envMapIntensity=P.ei;if(T.prop)T.prop.material.envMapIntensity=P.ei;m.metalness=P.pm;m.roughness=P.pr;m.normalScale.set(P.pn,P.pn*(P.fmt=='dx'?-1:1));m.aoMapIntensity=P.pa;m.displacementScale=P.pd;m.displacementBias=-P.pd/2;m.wireframe=T.dbg.wireframe=P.wire;
@@ -250,7 +258,7 @@ function envTex(n){const W=1024,H=512,c=document.createElement('canvas');c.width
  const lin=st=>{const g=x.createLinearGradient(0,0,0,H);st.forEach(([o,k])=>g.addColorStop(o,k));x.fillStyle=g;x.fillRect(0,0,W,H)};
  if(n=='furnace'){x.fillStyle='#fff';x.fillRect(0,0,W,H)}
  else if(n=='sky'){lin([[0,'#2f64b0'],[.49,'#bcd8f2'],[.5,'#6a6055'],[1,'#2a2622']]);const g=x.createRadialGradient(700,130,0,700,130,70);g.addColorStop(0,'#fff');g.addColorStop(.3,'#fff');g.addColorStop(1,'rgba(255,240,200,0)');x.fillStyle=g;x.fillRect(0,0,W,H)}
- else if(n=='studio'){lin([[0,'#1a1a20'],[.5,'#2a2a32'],[1,'#0c0c0e']]);x.filter='blur(14px)';x.fillStyle='#fff';x.fillRect(140,110,170,140);x.fillStyle='#d8e4ff';x.fillRect(620,90,60,200);x.fillStyle='#ffe2c4';x.fillRect(830,150,150,90);x.filter='none'}
+ else if(n=='studio'){lin([[0,'#6a6a78'],[.5,'#9a9aa6'],[1,'#34343a']]);x.filter='blur(14px)';x.fillStyle='#fff';x.fillRect(140,110,170,140);x.fillStyle='#d8e4ff';x.fillRect(620,90,60,200);x.fillStyle='#ffe2c4';x.fillRect(830,150,150,90);x.filter='none'}
  else{x.fillStyle='#111';x.fillRect(0,0,W,H);for(let i=0;i<=16;i++){x.fillStyle=i%4?'#555':'#fff';x.fillRect(i*W/16-1,0,2,H)}for(let j=0;j<=8;j++){x.fillStyle=j==4?'#ff5f5f':j%2?'#555':'#aaa';x.fillRect(0,j*H/8-1,W,2)}}
  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.mapping=THREE.EquirectangularReflectionMapping;return t}
 function buildEnv(){const t=P.env=='custom'?CUSTOM:envTex(P.env),pm=T.pm||(T.pm=new THREE.PMREMGenerator(T.r)),rt=t.isCubeTexture?pm.fromCubemap(t):pm.fromEquirectangular(t);
